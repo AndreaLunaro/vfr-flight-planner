@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pianificazione Volo VFR e Weight & Balance</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1>Pianificazione Volo VFR e Weight & Balance</h1>
+            <p>Strumento completo per la pianificazione del volo e calcoli di peso e bilanciamento</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('flight-planning', this)">Pianificazione Volo</button>
+            <button class="tab-btn" onclick="switchTab('weight-balance', this)">Weight & Balance</button>
+        </nav>
+
+        <!-- Flight Planning Tab -->
+        <div id="flight-planning" class="tab-content active">
+            <div class="section">
+                <h2>Parametri di Volo</h2>
+                <div class="flight-params">
+                    <div class="form-group">
+                        <label class="form-label" for="cruise-speed">Velocità di Crociera (kts)</label>
+                        <input type="number" id="cruise-speed" class="form-control" value="90" min="1" max="500">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fuel-consumption">Consumo Orario (litri/ora)</label>
+                        <input type="number" id="fuel-consumption" class="form-control" value="30" min="1" max="200">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="num-waypoints">Numero Waypoints</label>
+                        <input type="number" id="num-waypoints" class="form-control" value="3" min="2" max="20">
+                    </div>
+                    <button class="btn btn--primary" onclick="generateWaypoints()">Aggiungi Waypoints</button>
+                </div>
+            </div>
+
+            <!-- Waypoints Section -->
+            <div class="section" id="waypoints-section" style="display: none;">
+                <h3>Waypoints</h3>
+                <div id="waypoints-container"></div>
+                <button class="btn btn--primary" onclick="calculateRoute()" style="margin-top: 16px;">Calcola Rotta</button>
+            </div>
+
+            <!-- Alternate Airport Section -->
+            <div class="section">
+                <h3>Aeroporto Alternato</h3>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="include-alternate" onchange="toggleAlternate()"> Include Alternate
+                    </label>
+                </div>
+                <div id="alternate-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="alternate-departure">Partenza Alternato</label>
+                        <input type="text" id="alternate-departure" class="form-control" placeholder="Nome città/aeroporto">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="alternate-destination">Destinazione Alternato</label>
+                        <input type="text" id="alternate-destination" class="form-control" placeholder="Nome città/aeroporto">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flight Results -->
+            <div class="section" id="flight-results" style="display: none;">
+                <h3>Risultati Pianificazione Volo</h3>
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>FIX</th>
+                                <th>Route (°)</th>
+                                <th>Alt. [Ft]</th>
+                                <th>Dist. [NM]</th>
+                                <th>Radial</th>
+                                <th>Flight Time [min]</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flight-results-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="alternate-results" style="display: none;">
+                    <h4>Rotta Alternato</h4>
+                    <div class="table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>FIX</th>
+                                    <th>Route (°)</th>
+                                    <th>Alt. [Ft]</th>
+                                    <th>Dist. [NM]</th>
+                                    <th>Radial</th>
+                                    <th>Flight Time [min]</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alternate-results-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flight-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Distanza Totale:</span>
+                        <span id="total-distance">0 NM</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Tempo Totale:</span>
+                        <span id="total-time">0 min</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Consumo Carburante:</span>
+                        <span id="fuel-required">0 L</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weight & Balance Tab -->
+        <div id="weight-balance" class="tab-content">
+            <div class="section">
+                <h2>Weight & Balance Calculator</h2>
+                
+                <div class="wb-container">
+                    <div class="wb-table-section">
+                        <div class="table-container">
+                            <table class="wb-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Weight [Kg]</th>
+                                        <th>Arm [m]</th>
+                                        <th>Moment [Kgm]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>AC Empty Weight</td>
+                                        <td><input type="number" class="form-control wb-weight" data-arm="1.006" placeholder="0" step="0.1" oninput="updateWBCalculation()"></td>
+                                        <td>1.006</td>
+                                        <td class="wb-moment">0.0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pilot+Copilot</td>
+                                        <td><input type="number" class="form-control wb-weight" data-arm="1.155" placeholder="0" step="0.1" oninput="updateWBCalculation()"></td>
+                                        <td>1.155</td>
+                                        <td class="wb-moment">0.0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Rear seats</td>
+                                        <td><input type="number" class="form-control wb-weight" data-arm="2.035" placeholder="0" step="0.1" oninput="updateWBCalculation()"></td>
+                                        <td>2.035</td>
+                                        <td class="wb-moment">0.0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Fuel on Board [AvGas liters]</td>
+                                        <td><input type="number" class="form-control wb-fuel" placeholder="0" step="0.1" oninput="updateWBCalculation()"></td>
+                                        <td>1.075</td>
+                                        <td class="wb-moment">0.0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Luggage rack</td>
+                                        <td><input type="number" class="form-control wb-weight" data-arm="2.6" placeholder="0" step="0.1" oninput="updateWBCalculation()"></td>
+                                        <td>2.6</td>
+                                        <td class="wb-moment">0.0</td>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <td><strong>Total</strong></td>
+                                        <td><strong id="total-weight">0.0</strong></td>
+                                        <td><strong id="total-arm">0.0</strong></td>
+                                        <td><strong id="total-moment">0.0</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="wb-controls">
+                            <button class="btn btn--primary" onclick="calculateWB()">Calculate Weight & Balance</button>
+                            <button class="btn btn--secondary" onclick="resetWB()">Reset Weight & Balance</button>
+                        </div>
+
+                        <div id="wb-status" class="wb-status" style="display: none;"></div>
+                    </div>
+
+                    <div class="wb-chart-section">
+                        <h3>Weight & Balance Envelope</h3>
+                        <div class="chart-container" style="position: relative; height: 400px;">
+                            <canvas id="wb-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Caricamento dati...</p>
+        </div>
+
+        <div id="error-message" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
