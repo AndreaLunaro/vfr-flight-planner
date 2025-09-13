@@ -1,6 +1,12 @@
-// VFR Flight Planning & Weight & Balance - Fixed and extended
+/* app.js - Full VFR planner + W&B
+   - Waypoint generation / geocoding (Nominatim)
+   - Route and alternate calculation & display
+   - Export to Excel (attempt to preserve template formatting)
+   - Print to PDF (A5) by converting sheet to HTML and calling print
+   - Weight & Balance with Chart.js
+   - Responsive tweaks
+*/
 
-// Global variables
 let waypoints = [];
 let alternateWaypoints = [];
 let lastRouteData = null;
@@ -16,454 +22,387 @@ const config = {
   ]
 };
 
-// Utility: set cell value in worksheet without destroying existing styles
+// UI helpers
+function showLoading(show) {
+  const ld = document.getElementById('loading');
+  if (ld) ld.style.display = show ? 'flex' : 'none';
+}
+function showError(msg) {
+  const el = document.getElementById('error-message');
+  if (el) { el.textContent = msg; el.style.display = 'block'; setTimeout(()=>el.style.display='none',5000); }
+  else alert(msg);
+}
+
+// Waypoint UI
+function clearContainer(containerId) {
+  const c = document.getElementById(containerId);
+  if (c) c.innerHTML = '';
+}
+function generateWaypoints() {
+  const num = parseInt(document.getElementById('num-waypoints').value) || 0;
+  if (num < 2) { showError('Inserire almeno 2 waypoints'); return; }
+  const container = document.getElementById('waypoints-container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i=0;i<num;i++) {
+    const div = document.createElement('div'); div.className = 'wp-row';
+    const input = document.createElement('input'); input.className = 'form-control waypoint-name';
+    input.placeholder = i===0 ? 'Origin / Airfield' : (i===num-1 ? 'Destination / Airfield' : 'Waypoint');
+    div.appendChild(input);
+    container.appendChild(div);
+  }
+  document.getElementById('waypoints-section').style.display = 'block';
+}
+function generateAlternateWaypoints() {
+  const num = parseInt(document.getElementById('num-alt-waypoints').value) || 0;
+  if (num < 2) { showError('Inserire almeno 2 waypoints per alternato'); return; }
+  const container = document.getElementById('alt-waypoints-container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i=0;i<num;i++) {
+    const div = document.createElement('div'); div.className = 'wp-row';
+    const input = document.createElement('input'); input.className = 'form-control waypoint-name-alt';
+    input.placeholder = i===0 ? 'Alt origin' : (i===num-1 ? 'Alt destination' : 'Alt waypoint');
+    div.appendChild(input);
+    container.appendChild(div);
+  }
+  document.getElementById('alternate-section').style.display = 'block';
+}
+
+// Geocode via Nominatim
+async function geocodeLocation(name) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`;
+  const resp = await fetch(url, { headers: { 'Accept-Language':'en' }});
+  if (!resp.ok) throw new Error('Errore geocoding per ' + name);
+  const data = await resp.json();
+  if (!data || data.length===0) throw new Error('Nessun risultato per ' + name);
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+}
+
+// Geometry helpers
+function toRad(v){ return v * Math.PI / 180; }
+function toDeg(v){ return v * 180 / Math.PI; }
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 3440.065;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function calculateBearing(lat1, lon1, lat2, lon2) {
+  const y = Math.sin(toRad(lon2-lon1))*Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) - Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(toRad(lon2-lon1));
+  let brng = toDeg(Math.atan2(y,x)); brng = (brng + 360) % 360; return brng;
+}
+function calculateRouteSegments(points) {
+  const segments = []; let totalDistance=0, totalTime=0, totalFuel=0;
+  const speed = parseFloat(document.getElementById('cruise-speed')?.value) || config.defaultFlightSpeed;
+  const consumption = parseFloat(document.getElementById('fuel-consumption')?.value) || config.defaultConsumption;
+  for (let i=0;i<points.length-1;i++){
+    const from = points[i], to = points[i+1];
+    const distance = haversineDistance(from.lat, from.lon, to.lat, to.lon);
+    const bearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
+    const timeMin = (distance / speed) * 60;
+    const fuel = consumption * timeMin/60;
+    totalDistance += distance; totalTime += timeMin; totalFuel += fuel;
+    segments.push({
+      from: from.name||'',
+      to: to.name||'',
+      distance,
+      bearing: Math.round(bearing),
+      radial: Math.round(bearing),
+      flightTime: `${Math.round(timeMin)} min`,
+      altitude: ''
+    });
+  }
+  return { segments, totals:{distance: totalDistance, time: totalTime, fuel: totalFuel} };
+}
+
+// Display results (main + alternate) - fixed to show first FIX
+function displayFlightResults(routeData, containerBodyId='flight-results-body', resultsSectionId='flight-results') {
+  const tbody = document.getElementById(containerBodyId);
+  const resultsSection = document.getElementById(resultsSectionId);
+  if (!tbody || !resultsSection) return;
+  tbody.innerHTML = '';
+  const pts = (containerBodyId==='flight-results-body') ? waypoints : alternateWaypoints;
+  const segs = routeData.segments || [];
+  for (let i=0;i<pts.length-1;i++){
+    const seg = segs[i] || {};
+    const row = tbody.insertRow();
+    row.insertCell().textContent = pts[i].name || '';
+    row.insertCell().textContent = (pts[i].name && pts[i+1] && pts[i+1].name) ? (`${pts[i].name} -> ${pts[i+1].name}`) : '';
+    row.insertCell().textContent = seg.altitude !== undefined ? seg.altitude : '';
+    row.insertCell().textContent = seg.distance !== undefined ? seg.distance.toFixed(1) : '';
+    row.insertCell().textContent = seg.radial !== undefined ? seg.radial + '°' : '';
+    row.insertCell().textContent = seg.flightTime || '';
+  }
+  if (pts.length>0) {
+    const last = pts[pts.length-1];
+    const row = tbody.insertRow();
+    row.insertCell().textContent = last.name || '';
+    row.insertCell().textContent = '-';
+    row.insertCell().textContent = '-';
+    row.insertCell().textContent = '-';
+    row.insertCell().textContent = '-';
+    row.insertCell().textContent = '-';
+  }
+  if (containerBodyId==='flight-results-body') {
+    const totalDistanceEl = document.getElementById('total-distance');
+    const totalTimeEl = document.getElementById('total-time');
+    const fuelRequiredEl = document.getElementById('fuel-required');
+    if (routeData.totals) {
+      if (totalDistanceEl) totalDistanceEl.textContent = `${routeData.totals.distance.toFixed(1)} NM`;
+      if (totalTimeEl) totalTimeEl.textContent = `${Math.round(routeData.totals.time)} min`;
+      if (fuelRequiredEl) fuelRequiredEl.textContent = `${routeData.totals.fuel.toFixed(1)} L`;
+    }
+    resultsSection.style.display='block';
+  } else {
+    resultsSection.style.display='block';
+  }
+}
+
+// Main route calculation (handles alternate)
+async function calculateRouteHandler() {
+  showLoading(true);
+  try {
+    const mainNames = Array.from(document.querySelectorAll('#waypoints-container .waypoint-name')).map(i=>i.value.trim()).filter(x=>x);
+    if (mainNames.length<2) throw new Error('Inserire almeno 2 waypoints (main)');
+    const coords=[];
+    for (const n of mainNames) coords.push(await geocodeLocation(n));
+    waypoints = coords.map((c,idx)=>({ name: mainNames[idx], lat: c.lat, lon: c.lon }));
+    const rd = calculateRouteSegments(waypoints);
+    lastRouteData = rd;
+    displayFlightResults(rd,'flight-results-body','flight-results');
+
+    // Alternate: prefer inputs in alt-waypoints-container; else try alternative inputs if present
+    const altNamesInputs = Array.from(document.querySelectorAll('#alt-waypoints-container .waypoint-name-alt')).map(i=>i.value.trim()).filter(x=>x);
+    let altNames = altNamesInputs;
+    if (altNames.length < 2 && document.getElementById('include-alternate')?.checked) {
+      // try fallback inputs if present
+      const dep = document.getElementById('alternate-departure')?.value?.trim();
+      const dest = document.getElementById('alternate-destination')?.value?.trim();
+      if (dep && dest) altNames = [dep, dest];
+    }
+    if (altNames.length >= 2) {
+      const altCoords=[];
+      for (const n of altNames) altCoords.push(await geocodeLocation(n));
+      alternateWaypoints = altCoords.map((c,idx)=>({ name: altNames[idx], lat: c.lat, lon: c.lon }));
+      const ard = calculateRouteSegments(alternateWaypoints);
+      lastAlternateData = ard;
+      displayFlightResults(ard, 'alternate-results-body', 'alternate-results');
+    }
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Excel helpers that try to preserve template styles
 function setCellValuePreserve(ws, addr, value) {
   if (!addr) return;
-  const isNum = (v) => (typeof v === 'number' && isFinite(v));
-  if (ws[addr]) {
-    ws[addr].v = value;
-    ws[addr].t = isNum(value) ? 'n' : 's';
-  } else {
-    ws[addr] = { v: value, t: isNum(value) ? 'n' : 's' };
-  }
+  const isNum = (v) => (typeof v==='number' && isFinite(v));
+  if (ws[addr]) { ws[addr].v = value; ws[addr].t = isNum(value) ? 'n' : 's'; }
+  else { ws[addr] = { v: value, t: isNum(value) ? 'n' : 's' }; }
 }
 
-// ROUTE CALC & DISPLAY (kept minimal here; assume other functions exist in file)
-function calculateRoute() {
-  // existing implementation in the file is expected to fill `waypoints` and `lastRouteData`.
-  // This placeholder is kept if you want to trigger from UI manual button. The real implementation
-  // in your app earlier will run and set waypoints & lastRouteData.
-  console.log('calculateRoute: make sure your original route calc fills `waypoints` and `lastRouteData`.');
-}
-
-// --- EXPORT to Excel (preserve formatting) ---
+// Export to Excel
 async function exportToExcel() {
-  if (typeof XLSX === 'undefined') {
-    alert('SheetJS (XLSX) non trovato: includi xlsx.full.min.js');
-    return;
-  }
-
-  const templatePath = '/TemplateFlightLog.xlsx';
-
-  try {
-    const resp = await fetch(templatePath);
-    if (!resp.ok) throw new Error('Template non trovato: ' + resp.status);
-    const arrayBuffer = await resp.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
-    const sheetName = workbook.SheetNames[0];
-    const ws = workbook.Sheets[sheetName];
-
-    // Safety checks
-    const segs = lastRouteData && lastRouteData.segments ? lastRouteData.segments : [];
-    const wp = (typeof waypoints !== 'undefined' && waypoints.length) ? waypoints : [];
-
-    // Fill A11 with first waypoint (if available)
-    if (wp.length > 0) setCellValuePreserve(ws, 'A11', wp[0].name || wp[0]);
-
-    // Fill route rows: for i=1..wp.length-1 write A(11+i) .. F(11+i)
-    for (let i = 1; i < wp.length; i++) {
-      const row = 11 + i;
-      const seg = segs[i-1] || {};
-      setCellValuePreserve(ws, 'A' + row, wp[i].name || wp[i] || '');
-      setCellValuePreserve(ws, 'B' + row, seg.bearing !== undefined ? Math.ceil(seg.bearing) : '');
-      // altitude is not computed in route segments in this JS; leave blank or set default
-      setCellValuePreserve(ws, 'C' + row, seg.altitude !== undefined ? Math.ceil(seg.altitude) : '');
-      setCellValuePreserve(ws, 'D' + row, seg.distance !== undefined ? Math.ceil(seg.distance) : '');
-      setCellValuePreserve(ws, 'E' + row, seg.radial !== undefined ? Math.ceil(seg.radial) : '');
-      // FlightTime in seg.flightTime is like "12 min"
-      let ft = '';
-      if (seg.flightTime) {
-        const m = String(seg.flightTime).match(/(\d+)/);
-        if (m) ft = Math.ceil(parseFloat(m[1]));
-      }
-      setCellValuePreserve(ws, 'F' + row, ft);
-    }
-
-    // Block summaries -> replicate Python placements
-    // Sum distances and times from segments
-    const totalDistance = segs.reduce((s, x) => s + (x.distance || 0), 0);
-    const totalTimeMin = segs.reduce((s, x) => {
-      if (!x.flightTime) return s;
-      const m = String(x.flightTime).match(/(\d+)/);
-      return s + (m ? parseFloat(m[1]) : 0);
-    }, 0);
-
-    setCellValuePreserve(ws, 'A26', 'Block in:');
-    setCellValuePreserve(ws, 'C26', 'Block out: ' + Math.round(totalDistance*10)/10);
-    setCellValuePreserve(ws, 'F26', 'Block time: ' + Math.round(totalTimeMin));
-    setCellValuePreserve(ws, 'H26', 'Tot. T. Enr.');
-
-    // Trip fuel calculations (replicating Python: Trip_fuel = round(sum(FlightTime)*0.01666*consumption,1))
-    const consumptionInput = document.getElementById('fuel-consumption');
-    const consumption = consumptionInput ? parseFloat(consumptionInput.value) || config.defaultConsumption : config.defaultConsumption;
-    const Trip_fuel = Math.round(totalTimeMin * 0.01666 * consumption * 10) / 10;
-    setCellValuePreserve(ws, 'O21', Trip_fuel);
-
-    const ContingencyFuel = Math.round(Trip_fuel * 0.05 * 10) / 10;
-    setCellValuePreserve(ws, 'O23', ContingencyFuel > 5 ? ContingencyFuel : 5);
-
-    const Reserve45 = Math.round((45 * consumption / 60) * 10) / 10; // 45 min reserve
-    setCellValuePreserve(ws, 'O24', Reserve45);
-
-    // Alternate if present
-    if (lastAlternateData && lastAlternateData.segments && lastAlternateData.segments.length > 0 && alternateWaypoints && alternateWaypoints.length>0) {
-      const altSegs = lastAlternateData.segments;
-      for (let i = 1; i < alternateWaypoints.length; i++) {
-        const row = 11 + i;
-        const seg = altSegs[i-1] || {};
-        setCellValuePreserve(ws, 'K' + row, alternateWaypoints[i].name || alternateWaypoints[i] || '');
-        setCellValuePreserve(ws, 'L' + row, seg.bearing !== undefined ? Math.ceil(seg.bearing) : '');
-        setCellValuePreserve(ws, 'M' + row, seg.altitude !== undefined ? Math.ceil(seg.altitude) : '');
-        setCellValuePreserve(ws, 'N' + row, seg.distance !== undefined ? Math.ceil(seg.distance) : '');
-        setCellValuePreserve(ws, 'O' + row, seg.radial !== undefined ? Math.ceil(seg.radial) : '');
-        let ftAlt = '';
-        if (seg.flightTime) {
-          const m = String(seg.flightTime).match(/(\d+)/);
-          if (m) ftAlt = Math.ceil(parseFloat(m[1]));
-        }
-        setCellValuePreserve(ws, 'P' + row, ftAlt);
-      }
-
-      const altTotalTime = altSegs.reduce((s,x)=> s + (x.flightTime ? (parseInt(String(x.flightTime).match(/(\d+)/)||0)) : 0), 0);
-      const Alt_Trip_fuel = Math.round(altTotalTime * 0.01666 * consumption * 10) / 10;
-      setCellValuePreserve(ws, 'O22', Alt_Trip_fuel);
-    }
-
-    // Write file and trigger download - preserve workbook object to keep existing styles in template
-    XLSX.writeFile(workbook, 'ExportedFlightPlan.xlsx');
-
-    alert('Export completato: ExportedFlightPlan.xlsx');
-
-  } catch (err) {
-    console.error(err);
-    alert('Errore export Excel: ' + err.message);
-  }
-}
-
-// PRINT / PDF: generate an HTML view of the *same* filled worksheet and call print, forcing A5
-async function printFlightLog() {
-  if (typeof XLSX === 'undefined') {
-    alert('SheetJS (XLSX) non trovato: includi xlsx.full.min.js');
-    return;
-  }
-
+  if (typeof XLSX === 'undefined') { showError('SheetJS non trovato'); return; }
   const templatePath = '/TemplateFlightLog.xlsx';
   try {
     const resp = await fetch(templatePath);
     if (!resp.ok) throw new Error('Template non trovato: ' + resp.status);
-    const arrayBuffer = await resp.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
-    const sheetName = workbook.SheetNames[0];
-    const ws = workbook.Sheets[sheetName];
-
-    // Fill the worksheet exactly as in exportToExcel() so the printed view is identical
-    await exportToExcel(); // exportToExcel already prepares and downloads; but we want temporary HTML view.
-    // Instead of reusing exportToExcel (which triggers download), re-generate sheet HTML from the in-memory workbook
-
-  } catch (err) {
-    console.error(err);
-    alert('Errore stampa PDF: ' + err.message);
-    return;
-  }
-
-  // Because we cannot reliably convert the exact .xlsx visual layout to PDF in-browser, we'll re-open the
-  // workbook we've just written and convert the first sheet to HTML, then open a print window with A5 settings.
-  // NOTE: We will read the exported file from the in-memory workbook; to avoid complexity, we'll regenerate
-  // the workbook by calling exportToExcel but capture a new workbook object instead of forcing a download.
-
-  try {
-    // regenerate workbook buffer
-    const resp2 = await fetch('/TemplateFlightLog.xlsx');
-    const ab = await resp2.arrayBuffer();
-    const wb = XLSX.read(new Uint8Array(ab), {type:'array'});
+    const ab = await resp.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
     const sname = wb.SheetNames[0];
-    const sheet = wb.Sheets[sname];
+    const ws = wb.Sheets[sname];
 
-    // apply same population as exportToExcel by reusing lastRouteData & alternateWaypoints logic
-    // (we duplicate a small portion here to ensure the sheet contains values)
-    // This mirrors exportToExcel internal logic but without the download step
-
-    const segs = lastRouteData && lastRouteData.segments ? lastRouteData.segments : [];
-    const wp = (typeof waypoints !== 'undefined' && waypoints.length) ? waypoints : [];
-    if (wp.length > 0) setCellValuePreserve(sheet, 'A11', wp[0].name || wp[0]);
-    for (let i = 1; i < wp.length; i++) {
-      const row = 11 + i;
-      const seg = segs[i-1] || {};
-      setCellValuePreserve(sheet, 'A' + row, wp[i].name || wp[i] || '');
-      setCellValuePreserve(sheet, 'B' + row, seg.bearing !== undefined ? Math.ceil(seg.bearing) : '');
-      setCellValuePreserve(sheet, 'C' + row, seg.altitude !== undefined ? Math.ceil(seg.altitude) : '');
-      setCellValuePreserve(sheet, 'D' + row, seg.distance !== undefined ? Math.ceil(seg.distance) : '');
-      setCellValuePreserve(sheet, 'E' + row, seg.radial !== undefined ? Math.ceil(seg.radial) : '');
-      let ft = '';
-      if (seg.flightTime) {
-        const m = String(seg.flightTime).match(/(\d+)/);
-        if (m) ft = Math.ceil(parseFloat(m[1]));
+    // main route
+    if (waypoints.length > 0 && lastRouteData && lastRouteData.segments) {
+      setCellValuePreserve(ws,'A11', waypoints[0].name || '');
+      for (let i=1;i<waypoints.length;i++){
+        const row = 11 + i;
+        const seg = lastRouteData.segments[i-1] || {};
+        setCellValuePreserve(ws,'A'+row, waypoints[i].name || '');
+        setCellValuePreserve(ws,'B'+row, seg.bearing !== undefined ? seg.bearing : '');
+        setCellValuePreserve(ws,'C'+row, seg.altitude !== undefined ? seg.altitude : '');
+        setCellValuePreserve(ws,'D'+row, seg.distance !== undefined ? Math.round(seg.distance*10)/10 : '');
+        setCellValuePreserve(ws,'E'+row, seg.radial !== undefined ? seg.radial : '');
+        let ft=''; if (seg.flightTime) { const m=String(seg.flightTime).match(/(\d+)/); if (m) ft=parseInt(m[1]); }
+        setCellValuePreserve(ws,'F'+row, ft);
       }
-      setCellValuePreserve(sheet, 'F' + row, ft);
     }
+
+    // fuel summary (replicate Python)
+    const segs = lastRouteData?.segments || [];
+    const totalTimeMin = segs.reduce((s,x)=> {
+      if (!x.flightTime) return s;
+      const m = String(x.flightTime).match(/(\d+)/); return s + (m?parseInt(m[1]):0);
+    }, 0);
+    const consumption = parseFloat(document.getElementById('fuel-consumption')?.value) || config.defaultConsumption;
+    const Trip_fuel = Math.round(totalTimeMin * 0.01666 * consumption * 10)/10;
+    setCellValuePreserve(ws,'O21', Trip_fuel);
+    setCellValuePreserve(ws,'O23', Math.round(Math.max(Trip_fuel*0.05,5)*10)/10);
+    setCellValuePreserve(ws,'O24', Math.round((45 * consumption / 60) * 10)/10);
 
     // alternate
-    if (lastAlternateData && lastAlternateData.segments && lastAlternateData.segments.length > 0 && alternateWaypoints && alternateWaypoints.length>0) {
-      const altSegs = lastAlternateData.segments;
-      for (let i = 1; i < alternateWaypoints.length; i++) {
+    if (alternateWaypoints.length > 0 && lastAlternateData && lastAlternateData.segments) {
+      for (let i=1;i<alternateWaypoints.length;i++){
         const row = 11 + i;
-        const seg = altSegs[i-1] || {};
-        setCellValuePreserve(sheet, 'K' + row, alternateWaypoints[i].name || alternateWaypoints[i] || '');
-        setCellValuePreserve(sheet, 'L' + row, seg.bearing !== undefined ? Math.ceil(seg.bearing) : '');
-        setCellValuePreserve(sheet, 'M' + row, seg.altitude !== undefined ? Math.ceil(seg.altitude) : '');
-        setCellValuePreserve(sheet, 'N' + row, seg.distance !== undefined ? Math.ceil(seg.distance) : '');
-        setCellValuePreserve(sheet, 'O' + row, seg.radial !== undefined ? Math.ceil(seg.radial) : '');
-        let ftAlt = '';
-        if (seg.flightTime) {
-          const m = String(seg.flightTime).match(/(\d+)/);
-          if (m) ftAlt = Math.ceil(parseFloat(m[1]));
-        }
-        setCellValuePreserve(sheet, 'P' + row, ftAlt);
+        const seg = lastAlternateData.segments[i-1] || {};
+        setCellValuePreserve(ws,'K'+row, alternateWaypoints[i].name || '');
+        setCellValuePreserve(ws,'L'+row, seg.bearing !== undefined ? seg.bearing : '');
+        setCellValuePreserve(ws,'M'+row, seg.altitude !== undefined ? seg.altitude : '');
+        setCellValuePreserve(ws,'N'+row, seg.distance !== undefined ? Math.round(seg.distance*10)/10 : '');
+        setCellValuePreserve(ws,'O'+row, seg.radial !== undefined ? seg.radial : '');
+        let ft=''; if (seg.flightTime){ const m=String(seg.flightTime).match(/(\d+)/); if (m) ft=parseInt(m[1]); }
+        setCellValuePreserve(ws,'P'+row, ft);
+      }
+      const altTotalTime = lastAlternateData.segments.reduce((s,x)=>{ const m = x.flightTime?String(x.flightTime).match(/(\d+)/):null; return s + (m?parseInt(m[1]):0); }, 0);
+      setCellValuePreserve(ws,'O22', Math.round(altTotalTime * 0.01666 * consumption * 10)/10);
+    }
+
+    XLSX.writeFile(wb, 'FlightLog_export.xlsx');
+    alert('Esportazione completata: FlightLog_export.xlsx');
+  } catch (err) {
+    console.error(err); showError('Errore export Excel: ' + err.message);
+  }
+}
+
+// Print to PDF A5: convert filled sheet to HTML and call print()
+async function printFlightLog() {
+  if (typeof XLSX === 'undefined') { showError('SheetJS non trovato'); return; }
+  const templatePath = '/TemplateFlightLog.xlsx';
+  try {
+    const resp = await fetch(templatePath);
+    if (!resp.ok) throw new Error('Template non trovato: ' + resp.status);
+    const ab = await resp.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(ab), { type:'array' });
+    const sname = wb.SheetNames[0];
+    const ws = wb.Sheets[sname];
+
+    /* Populate ws same as exportToExcel (but don't save file) */
+    if (waypoints.length > 0 && lastRouteData && lastRouteData.segments) {
+      setCellValuePreserve(ws,'A11', waypoints[0].name || '');
+      for (let i=1;i<waypoints.length;i++){
+        const row = 11 + i; const seg = lastRouteData.segments[i-1] || {};
+        setCellValuePreserve(ws,'A'+row, waypoints[i].name || '');
+        setCellValuePreserve(ws,'B'+row, seg.bearing !== undefined ? seg.bearing : '');
+        setCellValuePreserve(ws,'C'+row, seg.altitude !== undefined ? seg.altitude : '');
+        setCellValuePreserve(ws,'D'+row, seg.distance !== undefined ? Math.round(seg.distance*10)/10 : '');
+        setCellValuePreserve(ws,'E'+row, seg.radial !== undefined ? seg.radial : '');
+        let ft=''; if (seg.flightTime){ const m=String(seg.flightTime).match(/(\d+)/); if (m) ft=parseInt(m[1]); }
+        setCellValuePreserve(ws,'F'+row, ft);
+      }
+    }
+    if (alternateWaypoints.length > 0 && lastAlternateData && lastAlternateData.segments) {
+      for (let i=1;i<alternateWaypoints.length;i++){
+        const row = 11 + i; const seg = lastAlternateData.segments[i-1] || {};
+        setCellValuePreserve(ws,'K'+row, alternateWaypoints[i].name || '');
+        setCellValuePreserve(ws,'L'+row, seg.bearing !== undefined ? seg.bearing : '');
+        setCellValuePreserve(ws,'M'+row, seg.altitude !== undefined ? seg.altitude : '');
+        setCellValuePreserve(ws,'N'+row, seg.distance !== undefined ? Math.round(seg.distance*10)/10 : '');
+        setCellValuePreserve(ws,'O'+row, seg.radial !== undefined ? seg.radial : '');
+        let ft=''; if (seg.flightTime){ const m=String(seg.flightTime).match(/(\d+)/); if (m) ft=parseInt(m[1]); }
+        setCellValuePreserve(ws,'P'+row, ft);
       }
     }
 
-    // Build HTML from sheet
-    const sheetHTML = XLSX.utils.sheet_to_html(sheet, {editable: false});
+    // sheet to html
+    const sheetHTML = XLSX.utils.sheet_to_html(ws, { editable:false });
     const win = window.open('', '_blank');
-    const style = `
-      <style>
-        @page { size: A5; margin: 8mm; }
-        body { font-family: Arial, Helvetica, sans-serif; }
-        table { border-collapse: collapse; width: 100%; }
-        td, th { border: 1px solid #333; padding: 4px; font-size: 10pt; }
-      </style>
-    `;
+    const style = `<style>@page { size:A5; margin:8mm } body{font-family:Arial,Helvetica,sans-serif} table{border-collapse:collapse;width:100%} td,th{border:1px solid #333;padding:4px;font-size:10pt}</style>`;
     win.document.write('<html><head><title>Flight Log - Print</title>' + style + '</head><body>');
     win.document.write(sheetHTML);
     win.document.write('</body></html>');
     win.document.close();
-    // Give browser a moment to render then call print
-    setTimeout(() => { win.focus(); win.print(); }, 700);
-
+    setTimeout(()=>{ win.focus(); win.print(); }, 700);
   } catch (err) {
-    console.error(err);
-    alert('Errore durante la generazione del PDF: ' + err.message);
+    console.error(err); showError('Errore stampa PDF: ' + err.message);
   }
 }
 
-// --- WEIGHT & BALANCE: read DOM and update chart ---
-function calculateWBFromDOM() {
-  const table = document.querySelector('.wb-table');
-  if (!table) return;
-  const tbody = table.tBodies[0];
-  if (!tbody) return;
-
-  let totalWeight = 0;
-  let totalMoment = 0;
-
-  const rows = Array.from(tbody.rows).filter(r => !r.classList.contains('total-row'));
-  rows.forEach(row => {
-    const itemText = (row.cells[0] && row.cells[0].textContent) ? row.cells[0].textContent.trim().toLowerCase() : '';
-    const weightInput = row.querySelector('.wb-weight-input');
-    const armInput = row.querySelector('.wb-arm-input');
-    const momentInput = row.querySelectorAll('input')[2];
-
-    let weightVal = parseFloat(weightInput && weightInput.value) || 0;
-    let armVal = parseFloat(armInput && armInput.value) || 0;
-    let moment = 0;
-
-    if (itemText.includes('fuel')) {
-      // fuel is provided in liters -> convert to kg
-      const fuelWeight = weightVal * config.fuelDensity;
-      moment = fuelWeight * armVal;
-      // show moment in the readonly input
-      if (momentInput) momentInput.value = moment.toFixed(1);
-      totalWeight += fuelWeight;
-      totalMoment += moment;
-    } else {
-      moment = weightVal * armVal;
-      if (momentInput) momentInput.value = moment.toFixed(1);
-      totalWeight += weightVal;
-      totalMoment += moment;
+// Weight & Balance
+function initializeWeightBalanceChart() {
+  const canvas = document.getElementById('wb-chart'); if (!canvas) return;
+  const container = canvas.parentElement; if (container){ container.style.minHeight='260px'; container.style.position='relative'; }
+  const ctx = canvas.getContext('2d'); if (currentChart) try{ currentChart.destroy(); }catch(e){} currentChart=null;
+  currentChart = new Chart(ctx, {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'Envelope', data: config.weightBalanceEnvelope.map(p=>({x:p.x,y:p.y})), showLine:true, fill:true, pointRadius:3 },
+      { label:'Current', data:[], pointRadius:8 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{type:'linear', min:400, max:1400, title:{display:true,text:'CG (mm)'}}, y:{min:0, max:1400, title:{display:true,text:'Weight (kg)'}} }
     }
   });
-
-  const totalRow = table.querySelector('.total-row');
+}
+function updateWeightBalanceChart(armMm, weight) {
+  if (!currentChart) return;
+  currentChart.data.datasets[1].data = (weight>0) ? [{x:armMm,y:weight}] : [];
+  currentChart.update();
+}
+function calculateWBFromDOM() {
+  const table = document.querySelector('.wb-table'); if (!table) return;
+  const tbody = table.tBodies[0]; if (!tbody) return;
+  const rows = Array.from(tbody.rows).filter(r=>!r.classList.contains('total-row'));
+  let totalWeight=0, totalMoment=0;
+  rows.forEach(r=>{
+    const label = r.cells[0]?.textContent?.toLowerCase() || '';
+    const weightInput = r.querySelector('.wb-weight-input'); const armInput = r.querySelector('.wb-arm-input');
+    const momentOut = r.querySelectorAll('input')[2];
+    let w = parseFloat(weightInput?.value) || 0; let arm = parseFloat(armInput?.value) || 0;
+    if (label.includes('fuel')) {
+      const wkg = w * config.fuelDensity; const m = wkg * arm;
+      if (momentOut) momentOut.value = m.toFixed(1); totalWeight += wkg; totalMoment += m;
+    } else {
+      const m = w * arm; if (momentOut) momentOut.value = m.toFixed(1); totalWeight += w; totalMoment += m;
+    }
+  });
+  const totalRow = document.querySelector('.wb-table .total-row');
   if (totalRow) {
-    const inputs = totalRow.querySelectorAll('input');
-    const cg = totalWeight > 0 ? (totalMoment / totalWeight) : 0;
+    const inputs = totalRow.querySelectorAll('input'); const cg = totalWeight>0 ? (totalMoment/totalWeight) : 0;
     if (inputs[0]) inputs[0].value = totalWeight.toFixed(1);
     if (inputs[1]) inputs[1].value = cg.toFixed(3);
     if (inputs[2]) inputs[2].value = totalMoment.toFixed(1);
-
-    // Update chart
-    updateWeightBalanceChart(cg * 1000, totalWeight);
-
-    // Update status
-    const statusDiv = document.getElementById('wb-status');
-    if (statusDiv) {
-      const inside = isPointInEnvelope(cg * 1000, totalWeight);
-      statusDiv.style.display = 'block';
-      statusDiv.textContent = inside ? 'WITHIN W&B RANGE - Safe to fly' : 'OUTSIDE W&B RANGE - Not safe to fly';
-      statusDiv.className = inside ? 'wb-status safe' : 'wb-status unsafe';
-    }
+    updateWeightBalanceChart(cg*1000, totalWeight);
+    const status = document.getElementById('wb-status'); if (status) { const inside = isPointInEnvelope(cg*1000, totalWeight); status.style.display='block'; status.textContent = inside ? 'WITHIN W&B RANGE - Safe to fly' : 'OUTSIDE W&B RANGE - Not safe to fly'; status.className = inside ? 'wb-status safe' : 'wb-status unsafe'; }
   }
 }
+function isPointInEnvelope(x,y){ const poly = config.weightBalanceEnvelope; let inside=false; for (let i=0,j=poly.length-1;i<poly.length;j=i++) { const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y; const intersect = ((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi+Number.EPSILON)+xi); if (intersect) inside=!inside; } return inside; }
 
-function calcWB() { calculateWBFromDOM(); }
-function resetWB() {
-  document.querySelectorAll('.wb-weight-input').forEach(i => i.value = '');
-  document.querySelectorAll('.wb-arm-input').forEach(i => i.value = '');
-  document.querySelectorAll('.wb-table .total-row input').forEach(i => i.value = '');
-  updateWeightBalanceChart(0,0);
-}
-
-function isPointInEnvelope(x,y){
-  const polygon = config.weightBalanceEnvelope;
-  let inside = false;
-  for (let i=0,j=polygon.length-1;i<polygon.length;j=i++){
-    const xi=polygon[i].x, yi=polygon[i].y;
-    const xj=polygon[j].x, yj=polygon[j].y;
-    const intersect = ((yi>y) !== (yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi+Number.EPSILON)+xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-// Chart init & update
-function initializeWeightBalanceChart() {
-  const canvas = document.getElementById('wb-chart');
-  if (!canvas) return;
-  // ensure container has height so Chart.js can render
-  const container = canvas.parentElement;
-  if (container) {
-    container.style.minHeight = '260px';
-    container.style.position = 'relative';
-  }
-
-  const ctx = canvas.getContext('2d');
-  if (currentChart) {
-    try { currentChart.destroy(); } catch(e){}
-    currentChart = null;
-  }
-
-  currentChart = new Chart(ctx, {
-    type: 'scatter',
-    data: {
-      datasets: [
-        {
-          label: 'W&B Envelope',
-          data: config.weightBalanceEnvelope.map(p => ({x:p.x,y:p.y})),
-          showLine: true,
-          borderWidth: 2,
-          pointRadius: 3,
-          fill: true
-        },
-        {
-          label: 'Current W&B',
-          data: [],
-          pointRadius: 8
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'top'}, title: { display: true, text: 'Weight & Balance' } },
-      scales: {
-        x: { type: 'linear', min:400, max:1400, title:{display:true,text:'CG (mm)'} },
-        y: { min: 0, max: 1400, title:{display:true,text:'Weight (kg)'} }
-      }
-    }
-  });
-}
-
-function updateWeightBalanceChart(armMm, weight) {
-  if (!currentChart) return;
-  if (weight > 0) currentChart.data.datasets[1].data = [{x:armMm,y:weight}]; else currentChart.data.datasets[1].data = [];
-  currentChart.update();
-}
-
-// Aircraft selection auto-apply
+// Auto-apply aircraft select
 const aircraftProfiles = {
-  'Aircraft A': { arms: [1.006,1.155,2.035,1.075,2.600], weights: [] },
-  'Aircraft B': { arms: [1.02,1.16,2.04,1.08,2.62], weights: [] }
+  'Aircraft A': { arms:[1.006,1.155,2.035,1.075,2.600], weights:[] },
+  'Aircraft B': { arms:[1.02,1.16,2.04,1.08,2.62], weights:[] }
 };
-
 function applyAircraftProfileFromSelect() {
-  const sel = document.getElementById('aircraft-select');
-  if (!sel) return;
-  const val = sel.value;
-  const profile = aircraftProfiles[val] || null;
-  // hide manual apply button if present
-  const applyBtn = document.querySelector("button[onclick*='applyAircraftProfile']");
-  if (applyBtn) applyBtn.style.display = 'none';
-
-  if (profile) {
-    // set arm inputs
-    const armInputs = Array.from(document.querySelectorAll('.wb-arm-input'));
-    armInputs.forEach((input, idx) => {
-      if (profile.arms && profile.arms[idx]!==undefined) input.value = profile.arms[idx];
-    });
-    // set weight inputs if provided
-    const weightInputs = Array.from(document.querySelectorAll('.wb-weight-input'));
-    if (profile.weights && profile.weights.length) {
-      weightInputs.forEach((input, idx) => {
-        if (profile.weights[idx]!==undefined) input.value = profile.weights[idx];
-      });
-    }
-    // auto-calc
-    calculateWBFromDOM();
-  }
+  const sel = document.getElementById('aircraft-select'); if (!sel) return;
+  const profile = aircraftProfiles[sel.value] || null;
+  const applyBtn = document.querySelector("button[onclick*='applyAircraftProfile']"); if (applyBtn) applyBtn.style.display='none';
+  if (!profile) return;
+  const armInputs = document.querySelectorAll('.wb-arm-input'); armInputs.forEach((inp,idx)=>{ if (profile.arms[idx]!==undefined) inp.value = profile.arms[idx]; });
+  const weightInputs = document.querySelectorAll('.wb-weight-input'); if (profile.weights && profile.weights.length) weightInputs.forEach((inp,idx)=>{ if (profile.weights[idx]!==undefined) inp.value = profile.weights[idx]; });
+  calculateWBFromDOM();
 }
 
-// Responsive mobile improvements: call on load & resize
+// Responsive adjustments
 function setupResponsive() {
-  // add viewport meta if missing
-  if (!document.querySelector('meta[name=\"viewport\"]')) {
-    const meta = document.createElement('meta');
-    meta.name = 'viewport';
-    meta.content = 'width=device-width, initial-scale=1';
-    document.getElementsByTagName('head')[0].appendChild(meta);
-  }
-
-  // adjust chart container height for small screens
-  function adjust() {
-    const container = document.querySelector('.chart-container');
-    if (!container) return;
-    if (window.innerWidth < 480) {
-      container.style.minHeight = '220px';
-    } else if (window.innerWidth < 768) {
-      container.style.minHeight = '260px';
-    } else {
-      container.style.minHeight = '320px';
-    }
-    if (currentChart) currentChart.resize();
-  }
-  window.addEventListener('resize', adjust);
-  adjust();
+  if (!document.querySelector('meta[name=\"viewport\"]')) { const meta=document.createElement('meta'); meta.name='viewport'; meta.content='width=device-width,initial-scale=1'; document.head.appendChild(meta); }
+  function adjust(){ const c=document.querySelector('.chart-container'); if (c){ if (window.innerWidth<480) c.style.minHeight='220px'; else if (window.innerWidth<768) c.style.minHeight='260px'; else c.style.minHeight='320px'; } if (currentChart) currentChart.resize(); }
+  window.addEventListener('resize', adjust); adjust();
 }
 
-// Init on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  try { initializeWeightBalanceChart(); } catch(e){ console.debug('chart init failed', e.message); }
-
-  // bind aircraft select automatic change
-  const sel = document.getElementById('aircraft-select');
-  if (sel) {
-    sel.addEventListener('change', applyAircraftProfileFromSelect);
-    // apply current selection immediately
-    applyAircraftProfileFromSelect();
-  }
-
-  // bind calc WB button
-  const calcBtn = document.querySelector('button[onclick*=\"calcWB\"]');
-  if (calcBtn) calcBtn.addEventListener('click', calculateWBFromDOM);
-
-  // bind reset
-  const resetBtn = document.querySelector('button[onclick*=\"resetWB\"]');
-  if (resetBtn) resetBtn.addEventListener('click', resetWB);
-
-  // bind export & print if buttons use those names
-  const exp = document.querySelector('button[onclick*=\"exportToExcel\"]');
-  if (exp) exp.addEventListener('click', exportToExcel);
-  const pr = document.querySelector('button[onclick*=\"printFlightLog\"]');
-  if (pr) pr.addEventListener('click', printFlightLog);
-
+// Init
+document.addEventListener('DOMContentLoaded', ()=>{
+  try { initializeWeightBalanceChart(); } catch(e){ console.debug('chart init', e.message); }
+  const sel = document.getElementById('aircraft-select'); if (sel) { sel.addEventListener('change', applyAircraftProfileFromSelect); applyAircraftProfileFromSelect(); }
+  const calcBtn = document.querySelector('button[onclick*=\"calculateRoute\"]'); if (calcBtn) calcBtn.addEventListener('click', calculateRouteHandler);
+  const expBtn = document.querySelector('button[onclick*=\"exportToExcel\"]'); if (expBtn) expBtn.addEventListener('click', exportToExcel);
+  const printBtn = document.querySelector('button[onclick*=\"printFlightLog\"]'); if (printBtn) printBtn.addEventListener('click', printFlightLog);
+  const genBtn = document.querySelector('button[onclick*=\"generateWaypoints\"]'); if (genBtn) genBtn.addEventListener('click', generateWaypoints);
+  const genAltBtn = document.querySelector('button[onclick*=\"generateAlternateWaypoints\"]'); if (genAltBtn) genAltBtn.addEventListener('click', generateAlternateWaypoints);
+  const calcWBBtn = document.querySelector('button[onclick*=\"calcWB\"]'); if (calcWBBtn) calcWBBtn.addEventListener('click', calculateWBFromDOM);
   setupResponsive();
 });
