@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="it" data-color-scheme="light">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VFR Flight Planning &amp; W&amp;B</title>
   <link rel="stylesheet" href="style.css" />
-  <!--<script src="xlsx.full.min.js"></script><! libreria XLSX -- >
+  <!-- sheetjs -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
 </head>
 
 <body>
   <!-- ===== Header & language toggle ===== -->
-  <header class="app-header">
+  <header class="app-header" role="banner">
     <div class="container flex justify-between items-center">
       <h1 data-i18n="title">Pianificazione VFR &amp; Weight &amp; Balance</h1>
-      <button id="lang-toggle" class="btn btn--outline" data-i18n="lang">English</button>
+      <div>
+        <button id="lang-toggle" class="btn btn--outline" aria-label="Toggle language" data-i18n="lang">English</button>
+      </div>
     </div>
   </header>
 
   <!-- ===== Tabs ===== -->
-  <nav class="tab-nav">
+  <nav class="tab-nav" role="navigation" aria-label="Main tabs">
     <button class="tab-btn active" onclick="switchTab('flight-planning', this)" data-i18n="tab_flight">
       Pianificazione Volo
     </button>
@@ -31,64 +33,69 @@
   <!-- ==================================================== -->
   <!-- === FLIGHT-PLANNING TAB ============================ -->
   <!-- ==================================================== -->
-  <section id="flight-planning" class="tab-content active">
-    <div class="section">
+  <main id="flight-planning" class="tab-content active" role="main">
+    <section class="section" aria-labelledby="flight-params-heading">
+      <h2 id="flight-params-heading" class="sr-only">Parametri Volo</h2>
+
       <!-- ---- Flight parameters ---- -->
       <div class="flight-params">
-        <label class="form-label" data-i18n="cruise_speed">Velocità [kts]</label>
-        <input id="cruise-speed" class="form-control" value="90" />
+        <label for="cruise-speed" class="form-label" data-i18n="cruise_speed">Velocità [kts]</label>
+        <input id="cruise-speed" class="form-control" type="number" min="30" max="300" value="90" />
 
-        <label class="form-label" data-i18n="fuel_consumption">Consumo [L/h]</label>
-        <input id="fuel-consumption" class="form-control" value="30" />
+        <label for="fuel-consumption" class="form-label" data-i18n="fuel_consumption">Consumo [L/h]</label>
+        <input id="fuel-consumption" class="form-control" type="number" min="1" max="500" value="30" />
 
-        <label class="form-label" data-i18n="num_wpts">Numero Waypoints</label>
-        <input id="num-waypoints" class="form-control" min="2" max="20" />
+        <label for="num-waypoints" class="form-label" data-i18n="num_wpts">Numero Waypoints</label>
+        <input id="num-waypoints" class="form-control" type="number" min="2" max="20" />
 
-        <button class="btn btn--secondary" onclick="generateWaypoints()" data-i18n="gen_wpts">
+        <button class="btn btn--secondary" onclick="generateWaypoints()" data-i18n="gen_wpts" aria-label="Genera Waypoints">
           Genera Waypoints
         </button>
       </div>
 
       <!-- ---- Dynamic waypoint inputs ---- -->
-      <div id="waypoints-section" class="section" style="display: none">
+      <div id="waypoints-section" class="section" style="display: none" aria-live="polite">
         <div id="waypoints-container"></div>
       </div>
 
       <!-- ---- Alternate controls ---- -->
       <div class="section">
-        <label>
+        <label for="include-alternate" class="form-label">
           <input type="checkbox" id="include-alternate" onchange="toggleAlternate()" />
           <span data-i18n="include_alt">Includi Alternato</span>
         </label>
 
         <div id="alternate-section" style="display: none">
           <div class="flight-params">
-            <label class="form-label" data-i18n="num_alt_wpts">Num Waypoints Alternato</label>
-            <input id="num-alt-waypoints" class="form-control" min="2" max="20" />
+            <label for="num-alt-waypoints" class="form-label" data-i18n="num_alt_wpts">Num Waypoints Alternato</label>
+            <input id="num-alt-waypoints" class="form-control" type="number" min="2" max="20" />
 
-            <button class="btn btn--secondary" onclick="generateAlternateWaypoints()" data-i18n="gen_alt_wpts">
+            <button class="btn btn--secondary" onclick="generateAlternateWaypoints()" data-i18n="gen_alt_wpts" aria-label="Genera Waypoints Alternato">
               Genera Alt&nbsp;Waypoints
             </button>
           </div>
 
-          <div id="alt-waypoints-container"></div>
+          <div id="alt-waypoints-container" aria-live="polite"></div>
         </div>
       </div>
 
       <!-- ---- Action buttons ---- -->
       <div class="flight-params">
-        <button class="btn btn--primary" onclick="calculateRoute()" data-i18n="calc">Calcola</button>
-        <button class="btn btn--outline" onclick="exportToExcel()" data-i18n="export_xlsx">
+        <button class="btn btn--primary" onclick="calculateRoute()" data-i18n="calc" aria-label="Calcola">
+          Calcola
+        </button>
+        <button class="btn btn--outline" onclick="exportToExcel()" data-i18n="export_xlsx" aria-label="Export Excel">
           Export&nbsp;Excel
         </button>
-        <button class="btn btn--outline" onclick="printFlightLog()" data-i18n="print_pdf">
+        <button class="btn btn--outline" onclick="printFlightLog()" data-i18n="print_pdf" aria-label="Stampa PDF">
           Stampa&nbsp;PDF
         </button>
       </div>
 
-      <!-- ---- Results table ---- -->
-      <div id="flight-results" class="table-container" style="display: none">
-        <table class="results-table">
+      <!-- ---- Results table (main route) ---- -->
+      <div id="flight-results" class="table-container" style="display: none" aria-live="polite">
+        <h3 class="sr-only">Risultati Rotta</h3>
+        <table class="results-table" role="table" aria-label="Risultati Rotta">
           <thead>
             <tr>
               <th data-i18n="table_fix">FIX</th>
@@ -102,29 +109,48 @@
           <tbody id="flight-results-body"></tbody>
         </table>
       </div>
-    </div>
-  </section>
+
+      <!-- ---- Results table (alternate) ---- -->
+      <div id="alt-results" class="table-container" style="display: none; margin-top: 1rem;" aria-live="polite">
+        <h3>Alternato</h3>
+        <table class="results-table" role="table" aria-label="Risultati Alternato">
+          <thead>
+            <tr>
+              <th data-i18n="table_fix">FIX</th>
+              <th data-i18n="table_route">Route</th>
+              <th data-i18n="table_alt">Alt. [Ft]</th>
+              <th data-i18n="table_dist">Dist. [NM]</th>
+              <th data-i18n="table_radial">Radial</th>
+              <th data-i18n="table_time">Flight&nbsp;Time&nbsp;[min]</th>
+            </tr>
+          </thead>
+          <tbody id="alt-results-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
   <!-- ==================================================== -->
   <!-- === WEIGHT-BALANCE TAB ============================= -->
   <!-- ==================================================== -->
-  <section id="weight-balance" class="tab-content">
+  <section id="weight-balance" class="tab-content" aria-labelledby="wb-heading">
+    <h2 id="wb-heading" class="sr-only">Weight and Balance</h2>
     <div class="section">
       <!-- Aircraft picker -->
       <div class="flight-params">
-        <label class="form-label">Aircraft</label>
+        <label for="aircraft-select" class="form-label">Aircraft</label>
         <select id="aircraft-select" class="form-control">
           <option>Aircraft A</option>
           <option>Aircraft B</option>
         </select>
-        <button class="btn btn--secondary" onclick="applyAircraftProfile(document.getElementById('aircraft-select').value)">
+        <button class="btn btn--secondary" onclick="applyAircraftProfile(document.getElementById('aircraft-select').value)" aria-label="Apply profile">
           Apply
         </button>
       </div>
 
       <!-- W&B table -->
       <div class="table-container">
-        <table class="wb-table">
+        <table class="wb-table" role="table" aria-label="Weight and Balance table">
           <thead>
             <tr>
               <th>Item</th>
@@ -136,32 +162,32 @@
           <tbody>
             <tr>
               <td>AC Empty Weight</td>
-              <td><input class="form-control wb-weight-input" /></td>
-              <td><input class="form-control wb-arm-input" value="1.006" /></td>
+              <td><input class="form-control wb-weight-input" type="number" step="0.1" /></td>
+              <td><input class="form-control wb-arm-input" value="1.006" type="number" step="0.001" /></td>
               <td><input class="form-control" readonly /></td>
             </tr>
             <tr>
               <td>Pilot+Copilot</td>
-              <td><input class="form-control wb-weight-input" /></td>
-              <td><input class="form-control wb-arm-input" value="1.155" /></td>
+              <td><input class="form-control wb-weight-input" type="number" step="0.1" /></td>
+              <td><input class="form-control wb-arm-input" value="1.155" type="number" step="0.001" /></td>
               <td><input class="form-control" readonly /></td>
             </tr>
             <tr>
               <td>Rear seats</td>
-              <td><input class="form-control wb-weight-input" /></td>
-              <td><input class="form-control wb-arm-input" value="2.035" /></td>
+              <td><input class="form-control wb-weight-input" type="number" step="0.1" /></td>
+              <td><input class="form-control wb-arm-input" value="2.035" type="number" step="0.001" /></td>
               <td><input class="form-control" readonly /></td>
             </tr>
             <tr>
               <td>Fuel on Board [AvGas&nbsp;liters]</td>
-              <td><input class="form-control wb-weight-input" /></td>
-              <td><input class="form-control wb-arm-input" value="1.075" /></td>
+              <td><input class="form-control wb-weight-input" type="number" step="0.1" /></td>
+              <td><input class="form-control wb-arm-input" value="1.075" type="number" step="0.001" /></td>
               <td><input class="form-control" readonly /></td>
             </tr>
             <tr>
               <td>Luggage rack</td>
-              <td><input class="form-control wb-weight-input" /></td>
-              <td><input class="form-control wb-arm-input" value="2.600" /></td>
+              <td><input class="form-control wb-weight-input" type="number" step="0.1" /></td>
+              <td><input class="form-control wb-arm-input" value="2.600" type="number" step="0.001" /></td>
               <td><input class="form-control" readonly /></td>
             </tr>
             <tr class="total-row">
@@ -176,14 +202,14 @@
 
       <!-- W&B controls -->
       <div class="flight-params wb-controls">
-        <button class="btn btn--primary" onclick="calcWB()">Calc&nbsp;W&amp;B</button>
-        <button class="btn btn--outline" onclick="resetWB()">Reset</button>
+        <button class="btn btn--primary" onclick="calcWB()" aria-label="Calcola W&B">Calc&nbsp;W&amp;B</button>
+        <button class="btn btn--outline" onclick="resetWB()" aria-label="Reset W&B">Reset</button>
       </div>
 
       <!-- W&B canvas -->
-      <div class="chart-container">
-        <canvas id="wb-chart"></canvas>
-        <div id="wb-status" class="wb-status"></div>
+      <div class="chart-container" aria-hidden="false">
+        <canvas id="wb-chart" width="600" height="360" role="img" aria-label="Weight and Balance chart"></canvas>
+        <div id="wb-status" class="wb-status" aria-live="polite"></div>
       </div>
     </div>
   </section>

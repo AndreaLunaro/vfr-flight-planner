@@ -164,10 +164,11 @@ function bearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-/* ====== Main route calculation ====== */
+/* ====== Main route calculation (Sostituita con versione migliorata) ====== */
 async function calculateRoute() {
   const names = [...document.querySelectorAll('.waypoint-name')].map(e => e.value.trim()).filter(Boolean);
-  if (names.length < 2) return alert('>1 WP');
+  if (names.length < 2) return alert('Inserire almeno due waypoint.');
+
   const coords = [];
   for (const n of names) coords.push(await geocode(n));
   waypoints = coords.map((c, i) => ({ name: names[i], ...c }));
@@ -218,7 +219,7 @@ function calcSegments(list) {
 /* ====== Table render with 1-row offset ====== */
 function renderTable(data, list, tbodyId, containerId) {
   const tb = document.getElementById(tbodyId);
-  tb.innerHTML = ''; // first row only FIX
+  tb.innerHTML = '';
   tb.insertAdjacentHTML('beforeend', `<tr><td>${list[0].name}</td><td colspan="5"></td></tr>`);
   for (let i = 1; i < list.length; i++) {
     const seg = data.segments[i - 1];
@@ -238,7 +239,7 @@ function renderTable(data, list, tbodyId, containerId) {
   document.getElementById(containerId).style.display = 'block';
 }
 
-/* ====== Excel export ====== */
+/* ====== Excel export (Aggiornata) ====== */
 async function exportToExcel() {
   if (!latestTripData) return alert('Calcola prima');
   const resp = await fetch('TemplateFlightLog.xlsx');
@@ -246,7 +247,7 @@ async function exportToExcel() {
   const wb = XLSX.read(ab, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
 
-  // --- Trip ---
+  // Trip
   XLSX.utils.sheet_add_aoa(ws, [[waypoints[0].name]], { origin: 'A11' });
   for (let i = 1; i < waypoints.length; i++) {
     const r = 11 + i;
@@ -265,12 +266,14 @@ async function exportToExcel() {
       { origin: 'A' + r }
     );
   }
+
   const totNM = Math.round(latestTripData.totals.distance * 10) / 10;
   const totMin = Math.round(latestTripData.totals.time * 10) / 10;
   const cons = +document.getElementById('fuel-consumption').value || config.defaultConsumption;
   const tripFuel = Math.round((latestTripData.totals.time / 60) * cons * 10) / 10;
   const contFuel = Math.max(5, Math.round(tripFuel * 0.05 * 10) / 10);
   const finalRes = Math.round((45 * cons) / 60 * 10) / 10;
+
   XLSX.utils.sheet_add_aoa(ws, [['Block in:']], { origin: 'A26' });
   XLSX.utils.sheet_add_aoa(ws, [[`Block out: ${totNM}`]], { origin: 'C26' });
   XLSX.utils.sheet_add_aoa(ws, [[`Block time: ${totMin}`]], { origin: 'F26' });
@@ -279,7 +282,7 @@ async function exportToExcel() {
   XLSX.utils.sheet_add_aoa(ws, [[contFuel]], { origin: 'O23' });
   XLSX.utils.sheet_add_aoa(ws, [[finalRes]], { origin: 'O24' });
 
-  // --- Alternate ---
+  // Alternate
   if (latestAltData && alternateRoute.length > 0) {
     const altTripFuel = Math.round((latestAltData.totals.time / 60) * cons * 10) / 10;
     XLSX.utils.sheet_add_aoa(ws, [[altTripFuel]], { origin: 'O22' });
@@ -363,7 +366,7 @@ function calcWB() {
   rows.forEach((tr, i) => {
     const w = +tr.children[1].firstElementChild.value || 0;
     const arm = +tr.children[2].firstElementChild.value;
-    const moment = i === 3 ? w * 0.72 * arm : w * arm; // fuel dens
+    const moment = i === 3 ? w * 0.72 * arm : w * arm;
     tr.children[3].firstElementChild.value = moment.toFixed(2);
     totW += i === 3 ? w * 0.72 : w;
     totM += moment;
@@ -375,30 +378,4 @@ function calcWB() {
   totalRow.children[3].firstElementChild.value = totM.toFixed(2);
   plotWB(totM, totW);
 }
-function resetWB() {
-  document.querySelectorAll('.wb-table input').forEach(el => {
-    el.value = '';
-    if (el.classList.contains('wb-arm-input')) el.value = '0';
-  });
-  applyAircraftProfile(document.getElementById('aircraft-select').value);
-  plotWB(null, null);
-}
-
-function initWBChart() {
-  const ctx = document.getElementById('wb-chart').getContext('2d');
-  currentChart = new Chart(ctx, {
-    type: 'scatter',
-    data: { datasets: [{ data: [], backgroundColor: 'red', pointRadius: 5 }] },
-    options: {
-      scales: {
-        x: { type: 'linear', title: { text: 'Moment', display: true } },
-        y: { type: 'linear', title: { text: 'Weight', display: true } }
-      }
-    }
-  });
-  applyAircraftProfile('Aircraft A');
-}
-function plotWB(moment, weight) {
-  currentChart.data.datasets[0].data = moment ? [{ x: moment, y: weight }] : [];
-  currentChart.update();
-}
+function reset
