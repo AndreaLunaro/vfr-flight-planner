@@ -943,6 +943,8 @@ class VFRFlightPlanner {
             // Generate and download (preserve template formatting)
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            this.lastExcelBlob = blob;
+            // test codice nuovo
             this.downloadBlob(blob, 'ExportedFlightPlan.xlsx');
         } catch (error) {
             console.error('Excel template export error:', error);
@@ -1014,23 +1016,19 @@ class VFRFlightPlanner {
 
     async exportToPDF() {
     try {
-        // 1. Carichiamo l'Excel generato localmente
-        const response = await fetch("ExportedFlightPlan.xlsx");
-        if (!response.ok) throw new Error("Impossibile caricare ExportedFlightPlan.xlsx");
-        const excelBuffer = await response.arrayBuffer();
-        const excelBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        if (!this.lastExcelBlob) {
+            throw new Error("Nessun Excel disponibile: esporta prima in XLSX");
+        }
 
-        // 2. Prepariamo la chiamata a ComPDF API
-        const apiKey = "250fb363bbf49787d7058da1c6272ed";   // 🔑 sostituisci con la tua chiave
-        const url = "https://api.compdf.com/convert"; // 🔗 verifica endpoint esatto
+        const apiKey = "c250fb363bbf49787d7058da1c6272ed";
+        const url = "https://api.compdf.com/convert"; // endpoint corretto da verificare
 
         const formData = new FormData();
-        formData.append("file", excelBlob, "ExportedFlightPlan.xlsx");
+        formData.append("file", this.lastExcelBlob, "ExportedFlightPlan.xlsx");
         formData.append("to", "pdf");
         formData.append("page_size", "A5");
         formData.append("orientation", "portrait");
 
-        // 3. Eseguiamo la richiesta
         const pdfResponse = await fetch(url, {
             method: "POST",
             headers: {
@@ -1041,7 +1039,6 @@ class VFRFlightPlanner {
 
         if (!pdfResponse.ok) throw new Error("Errore conversione PDF: " + pdfResponse.status);
 
-        // 4. Scarichiamo il PDF convertito
         const pdfBlob = await pdfResponse.blob();
         const link = document.createElement("a");
         link.href = URL.createObjectURL(pdfBlob);
