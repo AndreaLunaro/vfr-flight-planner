@@ -932,10 +932,11 @@ body {
 
 .aviation-table thead tr {
   background: linear-gradient(135deg, var(--aviation-primary), var(--aviation-secondary));
+
 }
 
 .aviation-table th {
-  color: white;
+  color: #003366;
   font-weight: bold;
   text-align: center;
   padding: 12px 8px;
