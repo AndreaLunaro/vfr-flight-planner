@@ -1013,95 +1013,48 @@ class VFRFlightPlanner {
     }
 
     async exportToPDF() {
-        // Create a temporary div with the flight plan data
-        const tempDiv = document.createElement('div');
-        tempDiv.style.cssText = 'position: absolute; left: -9999px; width: 210mm; height: 148mm; padding: 10mm;';
+    try {
+        // 1. Carichiamo l'Excel generato localmente
+        const response = await fetch("ExportedFlightPlan.xlsx");
+        if (!response.ok) throw new Error("Impossibile caricare ExportedFlightPlan.xlsx");
+        const excelBuffer = await response.arrayBuffer();
+        const excelBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 
-        const fuel = this.flightData.fuelData || {};
-        const alternateFuel = this.flightData.alternateFuelData || {};
+        // 2. Prepariamo la chiamata a ComPDF API
+        const apiKey = "250fb363bbf49787d7058da1c6272ed";   // 🔑 sostituisci con la tua chiave
+        const url = "https://api.compdf.com/convert"; // 🔗 verifica endpoint esatto
 
-        tempDiv.innerHTML = `
-            <div style="font-family: Arial, sans-serif; font-size: 8pt;">
-                <h2 style="text-align: center; margin-bottom: 20px; color: #1e3a8a;">VFR FLIGHT PLAN</h2>
+        const formData = new FormData();
+        formData.append("file", excelBlob, "ExportedFlightPlan.xlsx");
+        formData.append("to", "pdf");
+        formData.append("page_size", "A5");
+        formData.append("orientation", "portrait");
 
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-                    <thead>
-                        <tr style="background-color: #1e3a8a; color: white;">
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">FIX</th>
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Route</th>
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Alt[Ft]</th>
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Dist[NM]</th>
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Radial</th>
-                            <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Flight Time[min]</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${this.flightData.flightResults.map(result => `
-                            <tr>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.fix}</td>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.route}</td>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.altitude}</td>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.distance}</td>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.radial}</td>
-                                <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.flightTime}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+        // 3. Eseguiamo la richiesta
+        const pdfResponse = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: formData
+        });
 
-                <div style="margin-top: 15px; background-color: rgba(22, 163, 74, 0.1); padding: 10px; border: 2px solid #16a34a; border-radius: 8px;">
-                    <div style="color: #1e3a8a; font-weight: bold;"><strong>Trip Fuel:</strong> ${fuel.tripFuel || 0} litri</div>
-                    <div style="color: #1e3a8a; font-weight: bold;"><strong>Contingency Fuel:</strong> ${fuel.contingencyFuel || 0} litri</div>
-                    <div style="color: #1e3a8a; font-weight: bold;"><strong>Reserve Fuel:</strong> ${fuel.reserveFuel || 0} litri</div>
-                    <div style="color: #16a34a; font-weight: bold; font-size: 110%;"><strong>Total Fuel:</strong> ${fuel.totalFuel || 0} litri</div>
-                </div>
+        if (!pdfResponse.ok) throw new Error("Errore conversione PDF: " + pdfResponse.status);
 
-                ${this.flightData.alternateResults.length > 0 ? `
-                    <h3 style="margin-top: 20px; color: #1e3a8a;">Aeroporto Alternato</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background-color: #1e3a8a; color: white;">
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">FIX</th>
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Route</th>
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Alt[Ft]</th>
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Dist[NM]</th>
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Radial</th>
-                                <th style="border: 2px solid #1e3a8a; padding: 6px; font-weight: bold;">Flight Time[min]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${this.flightData.alternateResults.map(result => `
-                                <tr>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.fix}</td>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.route}</td>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.altitude}</td>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.distance}</td>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.radial}</td>
-                                    <td style="border: 1px solid #1e3a8a; padding: 6px; text-align: center; color: #1e3a8a; font-weight: bold;">${result.flightTime}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    <div style="margin-top: 10px; color: #1e3a8a; font-weight: bold;">
-                        <strong>Alternate Fuel:</strong> ${alternateFuel.alternateFuel || 0} litri
-                    </div>
-                ` : ''}
-            </div>
-        `;
+        // 4. Scarichiamo il PDF convertito
+        const pdfBlob = await pdfResponse.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(pdfBlob);
+        link.download = "ExportedFlightPlan.pdf";
+        link.click();
 
-        document.body.appendChild(tempDiv);
-
-        const opt = {
-            margin: 10,
-            filename: 'VFR_Flight_Plan.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
-        };
-
-        await html2pdf().set(opt).from(tempDiv).save();
-        document.body.removeChild(tempDiv);
+        this.showMessage("PDF esportato con successo tramite ComPDF API", "success");
+    } catch (error) {
+        console.error("Export PDF error:", error);
+        this.showMessage("Errore durante export in PDF: " + error.message, "error");
     }
+}
+
 
     downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
