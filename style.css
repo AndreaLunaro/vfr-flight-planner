@@ -1148,28 +1148,28 @@ body {
   .aviation-header {
     font-size: 2rem;
   }
-  
+
   .col-md-4 {
     margin-bottom: 24px;
   }
-  
+
   .aviation-table {
     font-size: 0.8rem;
   }
-  
+
   .aviation-table th,
   .aviation-table td {
     padding: 8px 4px;
   }
-  
+
   .aviation-fuel-summary {
     padding: 12px;
   }
-  
+
   .aviation-fuel-value {
     font-size: 0.9rem;
   }
-  
+
   .aviation-btn-primary,
   .aviation-btn-secondary,
   .aviation-btn-outline {
@@ -1274,4 +1274,20 @@ h5 {
 .success-highlight {
   border-color: var(--aviation-success) !important;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1) !important;
+}
+
+
+.aviation-input,
+input[type="number"],
+.waypoint-input input,
+.wb-range-input input,
+#wbTable input,
+input.form-control {
+  color: #000 !important;
+}
+
+/* Make fuel summary numbers black to be readable on white */
+.aviation-fuel-value,
+#tripFuel, #contingencyFuel, #reserveFuel, #totalFuel, #alternateFuel {
+  color: #000 !important;
 }
