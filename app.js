@@ -1017,40 +1017,71 @@ class VFRFlightPlanner {
     async exportToPDF() {
     try {
         if (!this.lastExcelBlob) {
-            throw new Error("Nessun Excel disponibile: esporta prima in XLSX");
+            throw new Error("Nessun Excel disponibile - esporta prima in XLSX");
         }
 
-        const apiKey = "c250fb363bbf49787d7058da1c6272ed";
-        const url = "https://api.compdf.com/convert"; // endpoint corretto da verificare
+        // Mostra stato di caricamento
+        this.showMessage("🔄 Conversione Excel→PDF in corso...", "info");
 
-        const formData = new FormData();
-        formData.append("file", this.lastExcelBlob, "ExportedFlightPlan.xlsx");
-        formData.append("to", "pdf");
-        formData.append("page_size", "A5");
-        formData.append("orientation", "portrait");
+        // Disabilita il bottone durante la conversione
+        const pdfButton = document.querySelector('[onclick*="exportToPDF"]');
+        if (pdfButton) {
+            pdfButton.disabled = true;
+            pdfButton.textContent = "Convertendo...";
+        }
 
-        const pdfResponse = await fetch(url, {
-            method: "POST",
+        console.log(`📤 Invio file Excel (${this.lastExcelBlob.size} bytes) a iLovePDF...`);
+
+        // Chiama la tua API Vercel
+        const response = await fetch('/api/ilovepdf-convert', {
+            method: 'POST',
             headers: {
-                "Authorization": `Bearer ${apiKey}`
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             },
-            body: formData
+            body: this.lastExcelBlob
         });
 
-        if (!pdfResponse.ok) throw new Error("Errore conversione PDF: " + pdfResponse.status);
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.details || errorData.error || `Errore server: ${response.status}`;
+            } catch {
+                errorMessage = `Errore server: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+        }
 
-        const pdfBlob = await pdfResponse.blob();
+        // Ricevi il PDF
+        const pdfBlob = await response.blob();
+        console.log(`✅ PDF ricevuto: ${pdfBlob.size} bytes`);
+
+        // Download automatico
         const link = document.createElement("a");
         link.href = URL.createObjectURL(pdfBlob);
-        link.download = "ExportedFlightPlan.pdf";
+        link.download = "VFR_FlightPlan_A5.pdf";
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
 
-        this.showMessage("PDF esportato con successo tramite ComPDF API", "success");
+        // Cleanup URL
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+        this.showMessage("✅ PDF A5 generato con iLovePDF!", "success");
+
     } catch (error) {
-        console.error("Export PDF error:", error);
-        this.showMessage("Errore durante export in PDF: " + error.message, "error");
+        console.error("❌ PDF Export Error:", error);
+        this.showMessage(`Errore conversione PDF: ${error.message}`, "error");
+    } finally {
+        // Riabilita il bottone
+        const pdfButton = document.querySelector('[onclick*="exportToPDF"]');
+        if (pdfButton) {
+            pdfButton.disabled = false;
+            pdfButton.textContent = "📄 Esporta PDF";
+        }
     }
 }
+
 
 
     downloadBlob(blob, filename) {
