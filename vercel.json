@@ -4,8 +4,5 @@
       "maxDuration": 30,
       "memory": 1024
     }
-  },
-  "env": {
-    "ILOVEPDF_PUBLIC_KEY": "@ilovepdf-public-key"
   }
 }
