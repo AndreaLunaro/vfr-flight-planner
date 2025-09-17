@@ -2,6 +2,7 @@
   "name": "vfr-planner-ilovepdf",
   "version": "1.0.0",
   "dependencies": {
+    "@ilovepdf/ilovepdf-nodejs": "^0.1.1",
     "form-data": "^4.0.0",
     "node-fetch": "^3.3.2"
   }
