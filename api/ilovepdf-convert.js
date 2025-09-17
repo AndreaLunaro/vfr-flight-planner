@@ -12,53 +12,48 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Ricevi il file Excel
         const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
         const excelBuffer = Buffer.concat(chunks);
 
-        console.log('Excel buffer size:', excelBuffer.length);
+        console.log('Excel buffer ricevuto:', excelBuffer.length, 'bytes');
 
-        // Verifica API keys
         const publicKey = process.env.ILOVEPDF_PUBLIC_KEY;
         const secretKey = process.env.ILOVEPDF_SECRET_KEY;
 
         if (!publicKey || !secretKey) {
-            console.error('Missing API keys');
             return res.status(500).json({ error: 'Missing API keys' });
         }
 
         // Inizializza iLovePDF
-        console.log('Initializing iLovePDF...');
         const instance = new ILovePDFApi(publicKey, secretKey);
         const task = instance.newTask('officepdf');
         await task.start();
 
-        // Aggiungi file
-        console.log('Adding Excel file...');
-        const file = ILovePDFFile.fromBuffer(excelBuffer, 'flight-plan.xlsx');
+        // Crea file dall'Excel buffer
+        const file = new ILovePDFFile(excelBuffer, 'flight-plan.xlsx');
         await task.addFile(file);
 
-        // Processa conversione
-        console.log('Processing conversion...');
-        await task.process({
-            page_size: 'A5',
-            page_orientation: 'portrait'
-        });
+        // Processa SENZA parametri specifici (usa default)
+        await task.process();
 
         // Scarica PDF
-        console.log('Downloading PDF...');
         const pdfBuffer = await task.download();
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename="VFR_FlightPlan_A5.pdf"');
+        res.setHeader('Content-Disposition', 'attachment; filename="VFR_FlightPlan.pdf"');
         return res.send(pdfBuffer);
 
     } catch (error) {
-        console.error('Errore iLovePDF:', error);
+        console.error('Errore iLovePDF completo:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        
         return res.status(500).json({ 
             error: error.message || 'Conversion error',
-            details: error.toString()
+            type: error.name || 'Unknown error'
         });
     }
 }
