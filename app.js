@@ -872,86 +872,75 @@ class VFRFlightPlanner {
         }
     }
 
-    async exportToExcelWithTemplate() {
-        try {
-            // Load template Excel file from repository root (TemplateFlightLog.xlsx)
-            const response = await fetch('TemplateFlightLog.xlsx');
+   import ExcelJS from "exceljs";
 
-            if (!response.ok) {
-                throw new Error(`Failed to load Excel template: ${response.status}`);
-            }
+export async function exportToExcelWithTemplate(
+  waypoints,
+  results,
+  fuel,
+  alternate
+) {
+  try {
+    // 1. Carica il template
+    const response = await fetch("/TemplateFlightLog.xlsx");
+    const arrayBuffer = await response.arrayBuffer();
 
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = new ExcelJS.Workbook();
-            // Preserve styles by loading the template and only changing cell values
-            await workbook.xlsx.load(arrayBuffer);
-            const worksheet = workbook.getWorksheet(1);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    const worksheet = workbook.getWorksheet(1);
 
-            // Fill main waypoints data - starting from A11
-            if (this.flightData.flightResults && this.flightData.flightResults.length > 0) {
-                this.flightData.flightResults.forEach((result, index) => {
-                    const row = 11 + index;
-                    // Put FIX name in column A for every row
-                    worksheet.getCell(`A${row}`).value = (result.fix || '').split(',')[0] || '';
-                    // For rows after the first, fill B-F (same logic as your python code)
-                    if (index > 0) {
-                        worksheet.getCell(`B${row}`).value = Math.ceil(parseFloat(result.route) || 0);
-                        worksheet.getCell(`C${row}`).value = Math.ceil(result.altitude || 0);
-                        worksheet.getCell(`D${row}`).value = Math.ceil(result.distance || 0);
-                        worksheet.getCell(`E${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
-                        worksheet.getCell(`F${row}`).value = Math.ceil(result.flightTime || 0);
-                    }
-                });
+    // 2. Scrivi i waypoints (da riga 11)
+    waypoints.forEach((wp, index) => {
+      const row = 11 + index;
+      worksheet.getCell(`A${row}`).value = wp.name;
+      worksheet.getCell(`B${row}`).value = wp.coordinates;
+      worksheet.getCell(`C${row}`).value = wp.altitude;
+      worksheet.getCell(`D${row}`).value = wp.ete;
+      worksheet.getCell(`E${row}`).value = wp.fuel;
+    });
 
-                // Block times / totals (A26, C26, F26, H26) similar to python example
-                const totalDistance = this.flightData.flightResults.reduce((s, r) => s + (r.distance || 0), 0);
-                const totalFlightTime = this.flightData.flightResults.reduce((s, r) => s + (r.flightTime || 0), 0);
+    // 3. Scrivi i risultati
+    worksheet.getCell("B5").value = results.totalDistance;
+    worksheet.getCell("B6").value = results.totalETE;
+    worksheet.getCell("B7").value = results.totalFuel;
 
-                worksheet.getCell('A26').value = 'Block in:';
-                worksheet.getCell('C26').value = `Block out: ${Math.round(totalDistance*10)/10}`;
-                worksheet.getCell('F26').value = `Block time: ${Math.round(totalFlightTime*10)/10}`;
-                worksheet.getCell('H26').value = 'Tot. T. Enr.';
+    // 4. Scrivi carburante
+    worksheet.getCell("D5").value = fuel.blockFuel;
+    worksheet.getCell("D6").value = fuel.taxiFuel;
+    worksheet.getCell("D7").value = fuel.tripFuel;
+    worksheet.getCell("D8").value = fuel.reserveFuel;
 
-                // Fill fuel data (O21, O23, O24)
-                if (this.flightData.fuelData) {
-                    worksheet.getCell('O21').value = this.flightData.fuelData.tripFuel || 0;
-                    worksheet.getCell('O23').value = this.flightData.fuelData.contingencyFuel || 0;
-                    worksheet.getCell('O24').value = this.flightData.fuelData.reserveFuel || 0;
-                }
-            }
+    // 5. Scrivi alternate
+    worksheet.getCell("F5").value = alternate.name;
+    worksheet.getCell("F6").value = alternate.distance;
+    worksheet.getCell("F7").value = alternate.ete;
 
-            // Fill alternate data if exists - starting from K11
-            if (this.flightData.alternateResults && this.flightData.alternateResults.length > 0) {
-                this.flightData.alternateResults.forEach((result, index) => {
-                    const row = 11 + index;
-                    worksheet.getCell(`K${row}`).value = (result.fix || '').split(',')[0] || '';
-                    if (index > 0) {
-                        worksheet.getCell(`L${row}`).value = Math.ceil(parseFloat(result.route) || 0);
-                        worksheet.getCell(`M${row}`).value = Math.ceil(result.altitude || 0);
-                        worksheet.getCell(`N${row}`).value = Math.ceil(result.distance || 0);
-                        worksheet.getCell(`O${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
-                        worksheet.getCell(`P${row}`).value = Math.ceil(result.flightTime || 0);
-                    }
-                });
+    // 6. Esporta Excel come ArrayBuffer
+    const excelArrayBuffer = await workbook.xlsx.writeBuffer();
+    const excelBlob = new Blob([excelArrayBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-                // Alternate trip fuel (O22) if computed
-                if (this.flightData.alternateFuelData) {
-                    worksheet.getCell('O22').value = this.flightData.alternateFuelData.alternateFuel || 0;
-                }
-            }
+    // 7. Invia a /api/convert come binario
+    const pdfResponse = await fetch("/api/convert", {
+      method: "POST",
+      body: excelBlob,
+    });
 
-            // Generate and download (preserve template formatting)
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            this.lastExcelBlob = blob;
-            // test codice nuovo
-            this.downloadBlob(blob, 'ExportedFlightPlan.xlsx');
-        } catch (error) {
-            console.error('Excel template export error:', error);
-            // Fallback to basic Excel export if template fails
-            await this.exportToBasicExcel();
-        }
+    if (!pdfResponse.ok) {
+      throw new Error(`Errore server: ${pdfResponse.status}`);
     }
+
+    // 8. Ricevi il PDF e aprilo
+    const pdfBlob = await pdfResponse.blob();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, "_blank");
+  } catch (error) {
+    console.error("Errore exportToExcelWithTemplate:", error);
+    alert("Errore durante l'esportazione: " + error.message);
+  }
+}
+
 
     async exportToBasicExcel() {
         const workbook = new ExcelJS.Workbook();
