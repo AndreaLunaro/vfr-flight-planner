@@ -860,8 +860,10 @@ class VFRFlightPlanner {
             this.showLoading(true);
             this.showMessage('Generazione file Excel e PDF in corso...', 'info');
 
-            await this.exportToExcelWithTemplate();
-            await this.exportToPDF();
+            await this.exportToExcelWithTemplate();           // compila + salva this.lastWorkbook
+            this.generateHTMLFromExcel(this.lastWorkbook);    // genera HTML nel #htmlPreview
+            await this.exportHTMLToPDF();                     // salva PDF A5
+
 
             this.showMessage('Export completato con successo! I file sono stati scaricati.', 'success');
         } catch (error) {
@@ -939,7 +941,7 @@ class VFRFlightPlanner {
                     worksheet.getCell('O22').value = this.flightData.alternateFuelData.alternateFuel || 0;
                 }
             }
-
+            this.lastWorkbook = workbook;
             // Generate and download (preserve template formatting)
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -952,6 +954,164 @@ class VFRFlightPlanner {
             await this.exportToBasicExcel();
         }
     }
+
+    generateHTMLFromExcel(workbook) {
+  const ws = workbook.getWorksheet(1);
+  const merges = (ws.model?.merges || []).map(parseA1Range); // [{s:{r,c}, e:{r,c}}]
+  const mergeLookup = buildMergeLookup(merges);
+
+  // colonne (width in "wch" -> px approx)
+  const colWidths = (ws.columns || []).map(c => Math.round((c?.width ?? 8.43) * 7 + 5));
+
+  let html = '<table class="excel-table" style="border-collapse:collapse;table-layout:fixed;width:100%">';
+  // colgroup per larghezze
+  html += '<colgroup>';
+  colWidths.forEach(px => { html += `<col style="width:${px}px">`; });
+  html += '</colgroup>';
+
+  // range utile
+  const { top, left, bottom, right } = detectUsedRange(ws);
+
+  for (let r = top; r <= bottom; r++) {
+    const row = ws.getRow(r);
+    const rowHeightPx = row?.height ? Math.round(row.height * 96 / 72) : null; // pt -> px
+    html += `<tr${rowHeightPx ? ` style="height:${rowHeightPx}px"` : ''}>`;
+
+    for (let c = left; c <= right; c++) {
+      // merge handling
+      const key = `${r}:${c}`;
+      if (mergeLookup.skip.has(key)) continue; // dentro merge ma non top-left
+
+      const span = mergeLookup.span.get(key) || { rowspan:1, colspan:1 };
+
+      const cell = ws.getCell(r, c);
+      const text = (cell?.text ?? cell?.value ?? '').toString();
+      const style = cellStyleToCSS(cell);
+
+      html += `<td${span.rowspan>1?` rowspan="${span.rowspan}"`:''}${span.colspan>1?` colspan="${span.colspan}"`:''}` +
+              `${style ? ` style="${style}"` : ''}>${escapeHtml(text)}</td>`;
+    }
+    html += '</tr>';
+  }
+
+  html += '</table>';
+
+  const container = document.getElementById('htmlPreview');
+  container.innerHTML = html;
+  container.style.display = 'block'; // visibile per la rasterizzazione
+  return container;
+
+  // Helpers
+  function parseA1(s) { // "A1" -> {r,c}
+    const m = s.match(/^([A-Z]+)(\d+)$/i);
+    const col = m[1].toUpperCase();
+    const row = parseInt(m[2], 10);
+    let cidx = 0;
+    for (let i = 0; i < col.length; i++) cidx = cidx * 26 + (col.charCodeAt(i) - 64);
+    return { r: row, c: cidx };
+  }
+  function parseA1Range(a1) {
+    const [s, e] = a1.split(':');
+    const S = parseA1(s), E = parseA1(e);
+    return { s: { r: Math.min(S.r, E.r), c: Math.min(S.c, E.c) }, e: { r: Math.max(S.r, E.r), c: Math.max(S.c, E.c) } };
+  }
+  function buildMergeLookup(ranges) {
+    const span = new Map(), skip = new Set();
+    for (const rg of ranges) {
+      const rowspan = rg.e.r - rg.s.r + 1;
+      const colspan = rg.e.c - rg.s.c + 1;
+      span.set(`${rg.s.r}:${rg.s.c}`, { rowspan, colspan });
+      for (let rr = rg.s.r; rr <= rg.e.r; rr++) {
+        for (let cc = rg.s.c; cc <= rg.e.c; cc++) {
+          if (rr === rg.s.r && cc === rg.s.c) continue;
+          skip.add(`${rr}:${cc}`);
+        }
+      }
+    }
+    return { span, skip };
+  }
+  function detectUsedRange(ws) {
+    let top=1e9,left=1e9,bottom=0,right=0;
+    ws.eachRow((row, r) => {
+      ws.eachCell({ includeEmpty: false }, (cell, addr) => {
+        const c = cell.col;
+        top = Math.min(top, r); bottom = Math.max(bottom, r);
+        left = Math.min(left, c); right = Math.max(right, c);
+      });
+    });
+    if (top === 1e9) return { top:1, left:1, bottom:1, right:1 };
+    return { top, left, bottom, right };
+  }
+  function cellStyleToCSS(cell) {
+    if (!cell) return '';
+    const css = [];
+
+    // font
+    const f = cell.font;
+    if (f?.bold) css.push('font-weight:bold');
+    if (f?.italic) css.push('font-style:italic');
+    if (f?.size) css.push(`font-size:${f.size}pt`);
+    if (f?.color?.argb) css.push(`color:${argbToCss(f.color.argb)}`);
+
+    // alignment
+    const al = cell.alignment;
+    if (al?.horizontal) css.push(`text-align:${al.horizontal}`);
+    if (al?.vertical) css.push(`vertical-align:${al.vertical}`);
+    if (al?.wrapText) css.push('white-space:pre-wrap');
+
+    // fill
+    const fill = cell.fill;
+    if (fill?.type === 'pattern' && fill.fgColor?.argb) {
+      css.push(`background-color:${argbToCss(fill.fgColor.argb)}`);
+    }
+
+    // border
+    const b = cell.border || {};
+    const map = side => {
+      const s = b[side];
+      if (!s || !s.style) return '';
+      const width = s.style.includes('thin') ? '1px' :
+                    s.style.includes('medium') ? '2px' :
+                    s.style.includes('thick') ? '3px' : '1px';
+      const color = s.color?.argb ? argbToCss(s.color.argb) : '#000';
+      return `${width} solid ${color}`;
+    };
+    const t = map('top'), r = map('right'), d = map('bottom'), l = map('left');
+    if (t) css.push(`border-top:${t}`);
+    if (r) css.push(`border-right:${r}`);
+    if (d) css.push(`border-bottom:${d}`);
+    if (l) css.push(`border-left:${l}`);
+
+    return css.join(';');
+  }
+  function argbToCss(argb) {
+    // ARGB -> #RRGGBB
+    const a = argb.slice(-8);
+    const r = a.slice(2,4), g = a.slice(4,6), b = a.slice(6,8);
+    return `#${r}${g}${b}`;
+  }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+  }
+}
+
+async exportHTMLToPDF() {
+  const el = document.getElementById('htmlPreview');
+  if (!el || !el.innerHTML.trim()) throw new Error('Nessun HTML generato dal workbook');
+
+  const opt = {
+    margin: [5, 5, 5, 5],
+    filename: 'VFRFlightPlanA5.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
+  };
+
+  await html2pdf().set(opt).from(el).save();
+
+  // opzionale: nascondi di nuovo
+  el.style.display = 'none';
+}
 
     async exportToBasicExcel() {
         const workbook = new ExcelJS.Workbook();
@@ -1034,7 +1194,7 @@ async exportToPDF() {
         }
 
         const pdfBlob = await response.blob();
-        
+
         // Download
         const link = document.createElement("a");
         link.href = URL.createObjectURL(pdfBlob);

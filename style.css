@@ -1292,3 +1292,13 @@ input.form-control {
 #tripFuel, #contingencyFuel, #reserveFuel, #totalFuel, #alternateFuel {
   color: #000 !important;
 }
+
+
+/* Pagina A5 + resa stampa */
+@media print {
+  @page { size: A5 portrait; margin: 8mm; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.a5-page { width: 148mm; min-height: 210mm; }
+.excel-table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+.excel-table td, .excel-table th { padding: 0; }
