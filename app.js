@@ -972,128 +972,195 @@ class VFRFlightPlanner {
   // range utile
   const { top, left, bottom, right } = detectUsedRange(ws);
 
-  for (let r = top; r <= bottom; r++) {
-    const row = ws.getRow(r);
-    const rowHeightPx = row?.height ? Math.round(row.height * 96 / 72) : null; // pt -> px
-    html += `<tr${rowHeightPx ? ` style="height:${rowHeightPx}px"` : ''}>`;
+  for (let r = top - 1; r < bottom; r++) {          // 0-based per SheetJS
+    let rowHtml = '<tr>';
 
-    for (let c = left; c <= right; c++) {
-      // merge handling
-      const key = `${r}:${c}`;
-      if (mergeLookup.skip.has(key)) continue; // dentro merge ma non top-left
+    for (let c = left - 1; c < right; c++) {
+        const cellAddr = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[cellAddr] || {};
 
-      const span = mergeLookup.span.get(key) || { rowspan:1, colspan:1 };
+        // Controllo se la cella è parte di un merge (skip se non è top-left)
+        const key = `${r + 1}:${c + 1}`;
+        if (mergeLookup.skip.has(key)) continue; // Cella dentro merge ma non top-left
 
-      const cell = ws.getCell(r, c);
-      const text = (cell?.text ?? cell?.value ?? '').toString();
-      const style = cellStyleToCSS(cell);
+        // Ottieni span per merge
+        const span = mergeLookup.span.get(key) || { rowspan: 1, colspan: 1 };
 
-      html += `<td${span.rowspan>1?` rowspan="${span.rowspan}"`:''}${span.colspan>1?` colspan="${span.colspan}"`:''}` +
-              `${style ? ` style="${style}"` : ''}>${escapeHtml(text)}</td>`;
-    }
-    html += '</tr>';
-  }
+        // Estrai valore della cella
+        const text = formatCellValue(cell);
 
-  html += '</table>';
+        // Genera stili CSS per la cella
+        const cellStyle = extractCellStyle(cell, cellAddr, r, c, ws);
 
-  const container = document.getElementById('htmlPreview');
-  container.innerHTML = html;
-  container.style.display = 'block'; // visibile per la rasterizzazione
-  return container;
+        // Costruisci attributi HTML
+        let cellAttributes = '';
+        if (span.rowspan > 1) cellAttributes += ` rowspan="${span.rowspan}"`;
+        if (span.colspan > 1) cellAttributes += ` colspan="${span.colspan}"`;
+        if (cellStyle) cellAttributes += ` style="${cellStyle}"`;
 
-  // Helpers
-  function parseA1(s) { // "A1" -> {r,c}
-    const m = s.match(/^([A-Z]+)(\d+)$/i);
-    const col = m[1].toUpperCase();
-    const row = parseInt(m[2], 10);
-    let cidx = 0;
-    for (let i = 0; i < col.length; i++) cidx = cidx * 26 + (col.charCodeAt(i) - 64);
-    return { r: row, c: cidx };
-  }
-  function parseA1Range(a1) {
-    const [s, e] = a1.split(':');
-    const S = parseA1(s), E = parseA1(e);
-    return { s: { r: Math.min(S.r, E.r), c: Math.min(S.c, E.c) }, e: { r: Math.max(S.r, E.r), c: Math.max(S.c, E.c) } };
-  }
-  function buildMergeLookup(ranges) {
-    const span = new Map(), skip = new Set();
-    for (const rg of ranges) {
-      const rowspan = rg.e.r - rg.s.r + 1;
-      const colspan = rg.e.c - rg.s.c + 1;
-      span.set(`${rg.s.r}:${rg.s.c}`, { rowspan, colspan });
-      for (let rr = rg.s.r; rr <= rg.e.r; rr++) {
-        for (let cc = rg.s.c; cc <= rg.e.c; cc++) {
-          if (rr === rg.s.r && cc === rg.s.c) continue;
-          skip.add(`${rr}:${cc}`);
-        }
-      }
-    }
-    return { span, skip };
-  }
-  function detectUsedRange(ws) {
-    let top=1e9,left=1e9,bottom=0,right=0;
-    ws.eachRow((row, r) => {
-      ws.eachCell({ includeEmpty: false }, (cell, addr) => {
-        const c = cell.col;
-        top = Math.min(top, r); bottom = Math.max(bottom, r);
-        left = Math.min(left, c); right = Math.max(right, c);
-      });
-    });
-    if (top === 1e9) return { top:1, left:1, bottom:1, right:1 };
-    return { top, left, bottom, right };
-  }
-  function cellStyleToCSS(cell) {
-    if (!cell) return '';
-    const css = [];
-
-    // font
-    const f = cell.font;
-    if (f?.bold) css.push('font-weight:bold');
-    if (f?.italic) css.push('font-style:italic');
-    if (f?.size) css.push(`font-size:${f.size}pt`);
-    if (f?.color?.argb) css.push(`color:${argbToCss(f.color.argb)}`);
-
-    // alignment
-    const al = cell.alignment;
-    if (al?.horizontal) css.push(`text-align:${al.horizontal}`);
-    if (al?.vertical) css.push(`vertical-align:${al.vertical}`);
-    if (al?.wrapText) css.push('white-space:pre-wrap');
-
-    // fill
-    const fill = cell.fill;
-    if (fill?.type === 'pattern' && fill.fgColor?.argb) {
-      css.push(`background-color:${argbToCss(fill.fgColor.argb)}`);
+        // Aggiungi cella alla riga
+        rowHtml += `<td${cellAttributes} data-cell="${cellAddr}">${text}</td>`;
     }
 
-    // border
-    const b = cell.border || {};
-    const map = side => {
-      const s = b[side];
-      if (!s || !s.style) return '';
-      const width = s.style.includes('thin') ? '1px' :
-                    s.style.includes('medium') ? '2px' :
-                    s.style.includes('thick') ? '3px' : '1px';
-      const color = s.color?.argb ? argbToCss(s.color.argb) : '#000';
-      return `${width} solid ${color}`;
-    };
-    const t = map('top'), r = map('right'), d = map('bottom'), l = map('left');
-    if (t) css.push(`border-top:${t}`);
-    if (r) css.push(`border-right:${r}`);
-    if (d) css.push(`border-bottom:${d}`);
-    if (l) css.push(`border-left:${l}`);
-
-    return css.join(';');
-  }
-  function argbToCss(argb) {
-    // ARGB -> #RRGGBB
-    const a = argb.slice(-8);
-    const r = a.slice(2,4), g = a.slice(4,6), b = a.slice(6,8);
-    return `#${r}${g}${b}`;
-  }
-  function escapeHtml(s) {
-    return s.replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-  }
+    rowHtml += '</tr>';
+    html += rowHtml;
 }
+
+// Funzioni helper da aggiungere prima del loop:
+
+function formatCellValue(cell) {
+    if (!cell || cell.v === undefined) return '&nbsp;';
+
+    let value = cell.v;
+
+    switch (cell.t) {
+        case 'n': // Number
+            if (cell.w) {
+                return escapeHtml(cell.w); // Usa formato già applicato
+            }
+            return value.toString();
+        case 's': // String
+            return escapeHtml(value.toString());
+        case 'b': // Boolean
+            return value ? 'TRUE' : 'FALSE';
+        case 'd': // Date
+            return value instanceof Date ? value.toLocaleDateString() : value.toString();
+        case 'e': // Error
+            return '#ERROR!';
+        default:
+            return escapeHtml(value.toString());
+    }
+}
+
+function extractCellStyle(cell, cellAddr, row, col, ws) {
+    const styles = [];
+
+    // Stili base per tutte le celle
+    styles.push('border: 1px solid #000');
+    styles.push('padding: 4px 6px');
+    styles.push('font-family: Calibri, Arial, sans-serif');
+    styles.push('font-size: 11pt');
+    styles.push('vertical-align: middle');
+    styles.push('white-space: nowrap');
+
+    // Stili specifici per riga/colonna (puoi personalizzare)
+    if (row === 7) { // Row 8 in 1-based (header ATIS)
+        styles.push('background-color: #f2f2f2');
+        styles.push('font-weight: bold');
+    }
+
+    if (row === 8) { // Row 9 in 1-based (header tabella)
+        styles.push('background-color: #4472c4');
+        styles.push('color: white');
+        styles.push('font-weight: bold');
+        styles.push('text-align: center');
+    }
+
+    // Sezione carburante (righe 18+)
+    if (row >= 17) { // Row 18+ in 1-based
+        styles.push('background-color: #f8f9fa');
+        if (col === 9 || col === 10) { // Colonne J-K (labels)
+            styles.push('font-weight: bold');
+        }
+        if (col >= 13) { // Colonne N+ (valori numerici)
+            styles.push('text-align: right');
+        }
+    }
+
+    // Allineamento dati numerici nelle colonne principali
+    if ((col >= 2 && col <= 7 && row > 8) || (col >= 12 && col <= 17 && row > 8)) {
+        styles.push('text-align: right');
+    }
+
+    // Larghezze colonne per A4
+    const colWidths = [
+        100, 60, 60, 60, 70, 50, 60, 60, 60, 20, // Main section
+        100, 60, 60, 60, 70, 50, 60, 60, 60      // Alternate section
+    ];
+
+    if (col < colWidths.length) {
+        styles.push(`min-width: ${colWidths[col]}px`);
+        styles.push(`width: ${colWidths[col]}px`);
+    }
+
+    // Se SheetJS ha informazioni di stile (versioni Pro), usale
+    if (cell.s) {
+        const style = cell.s;
+
+        if (style.font) {
+            if (style.font.bold) styles.push('font-weight: bold');
+            if (style.font.italic) styles.push('font-style: italic');
+            if (style.font.sz) styles.push(`font-size: ${style.font.sz}pt`);
+            if (style.font.color && style.font.color.rgb) {
+                styles.push(`color: #${style.font.color.rgb}`);
+            }
+        }
+
+        if (style.fill && style.fill.fgColor && style.fill.fgColor.rgb) {
+            styles.push(`background-color: #${style.fill.fgColor.rgb}`);
+        }
+
+        if (style.alignment) {
+            if (style.alignment.horizontal) {
+                styles.push(`text-align: ${style.alignment.horizontal}`);
+            }
+            if (style.alignment.vertical) {
+                const vAlign = style.alignment.vertical === 'center' ? 'middle' : style.alignment.vertical;
+                styles.push(`vertical-align: ${vAlign}`);
+            }
+        }
+
+        if (style.border) {
+            const borderProps = ['top', 'bottom', 'left', 'right'];
+            borderProps.forEach(prop => {
+                if (style.border[prop]) {
+                    const borderStyle = convertBorderStyle(style.border[prop]);
+                    styles.push(`border-${prop}: ${borderStyle}`);
+                }
+            });
+        }
+    }
+
+    return styles.join('; ');
+}
+
+function convertBorderStyle(border) {
+    let width = '1px';
+    let style = 'solid';
+    let color = '#000000';
+
+    if (border.style) {
+        switch (border.style) {
+            case 'thin': width = '1px'; break;
+            case 'medium': width = '2px'; break;
+            case 'thick': width = '3px'; break;
+            case 'double': style = 'double'; break;
+            case 'dotted': style = 'dotted'; break;
+            case 'dashed': style = 'dashed'; break;
+        }
+    }
+
+    if (border.color && border.color.rgb) {
+        color = `#${border.color.rgb}`;
+    }
+
+    return `${width} ${style} ${color}`;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, (match) => {
+        const escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return escapeMap[match];
+    });
+}
+
 
 async exportHTMLToPDF() {
   const el = document.getElementById('htmlPreview');
