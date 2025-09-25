@@ -26,6 +26,9 @@ class VFRFlightPlanner {
             baseAltitude: 1500
         };
 
+        this.lastWorkbook = null;
+        this.lastExcelBlob = null;
+
         this.init();
     }
 
@@ -858,14 +861,11 @@ class VFRFlightPlanner {
 
         try {
             this.showLoading(true);
-            this.showMessage('Generazione file Excel e PDF in corso...', 'info');
+            this.showMessage('Generazione file Excel in corso...', 'info');
 
-            await this.exportToExcelWithTemplate();           // compila + salva this.lastWorkbook
-            this.generateHTMLFromExcel(this.lastWorkbook);    // genera HTML nel #htmlPreview
-            await this.exportHTMLToPDF();                     // salva PDF A5
+            await this.exportToExcelWithTemplate();
 
-
-            this.showMessage('Export completato con successo! I file sono stati scaricati.', 'success');
+            this.showMessage('Export completato con successo! Il file Excel è stato scaricato.', 'success');
         } catch (error) {
             console.error('Export error:', error);
             this.showMessage(`Errore durante l'export: ${error.message}`, 'error');
@@ -942,393 +942,47 @@ class VFRFlightPlanner {
                 }
             }
             this.lastWorkbook = workbook;
-            // Generate and download (preserve template formatting)
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             this.lastExcelBlob = blob;
-            // test codice nuovo
-            this.downloadBlob(blob, 'ExportedFlightPlan.xlsx');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'FlightPlan.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Excel template export error:', error);
-            // Fallback to basic Excel export if template fails
-            await this.exportToBasicExcel();
+            console.error('Error exporting to Excel:', error);
+            throw new Error(`Errore nella generazione del file Excel: ${error.message}`);
         }
-    }
-
-    generateHTMLFromExcel(workbook) {
-  const ws = workbook.getWorksheet(1);
-  const merges = (ws.model?.merges || []).map(parseA1Range); // [{s:{r,c}, e:{r,c}}]
-  const mergeLookup = buildMergeLookup(merges);
-
-  // colonne (width in "wch" -> px approx)
-  const colWidths = (ws.columns || []).map(c => Math.round((c?.width ?? 8.43) * 7 + 5));
-
-  let html = '<table class="excel-table" style="border-collapse:collapse;table-layout:fixed;width:100%">';
-  // colgroup per larghezze
-  html += '<colgroup>';
-  colWidths.forEach(px => { html += `<col style="width:${px}px">`; });
-  html += '</colgroup>';
-
-  // range utile
-  const { top, left, bottom, right } = detectUsedRange(ws);
-
-  for (let r = top - 1; r < bottom; r++) {          // 0-based per SheetJS
-    let rowHtml = '<tr>';
-
-    for (let c = left - 1; c < right; c++) {
-        const cellAddr = XLSX.utils.encode_cell({ r, c });
-        const cell = ws[cellAddr] || {};
-
-        // Controllo se la cella è parte di un merge (skip se non è top-left)
-        const key = `${r + 1}:${c + 1}`;
-        if (mergeLookup.skip.has(key)) continue; // Cella dentro merge ma non top-left
-
-        // Ottieni span per merge
-        const span = mergeLookup.span.get(key) || { rowspan: 1, colspan: 1 };
-
-        // Estrai valore della cella
-        const text = formatCellValue(cell);
-
-        // Genera stili CSS per la cella
-        const cellStyle = extractCellStyle(cell, cellAddr, r, c, ws);
-
-        // Costruisci attributi HTML
-        let cellAttributes = '';
-        if (span.rowspan > 1) cellAttributes += ` rowspan="${span.rowspan}"`;
-        if (span.colspan > 1) cellAttributes += ` colspan="${span.colspan}"`;
-        if (cellStyle) cellAttributes += ` style="${cellStyle}"`;
-
-        // Aggiungi cella alla riga
-        rowHtml += `<td${cellAttributes} data-cell="${cellAddr}">${text}</td>`;
-    }
-
-    rowHtml += '</tr>';
-    html += rowHtml;
-}
-
-// Funzioni helper da aggiungere prima del loop:
-
-function formatCellValue(cell) {
-    if (!cell || cell.v === undefined) return '&nbsp;';
-
-    let value = cell.v;
-
-    switch (cell.t) {
-        case 'n': // Number
-            if (cell.w) {
-                return escapeHtml(cell.w); // Usa formato già applicato
-            }
-            return value.toString();
-        case 's': // String
-            return escapeHtml(value.toString());
-        case 'b': // Boolean
-            return value ? 'TRUE' : 'FALSE';
-        case 'd': // Date
-            return value instanceof Date ? value.toLocaleDateString() : value.toString();
-        case 'e': // Error
-            return '#ERROR!';
-        default:
-            return escapeHtml(value.toString());
-    }
-}
-
-function extractCellStyle(cell, cellAddr, row, col, ws) {
-    const styles = [];
-
-    // Stili base per tutte le celle
-    styles.push('border: 1px solid #000');
-    styles.push('padding: 4px 6px');
-    styles.push('font-family: Calibri, Arial, sans-serif');
-    styles.push('font-size: 11pt');
-    styles.push('vertical-align: middle');
-    styles.push('white-space: nowrap');
-
-    // Stili specifici per riga/colonna (puoi personalizzare)
-    if (row === 7) { // Row 8 in 1-based (header ATIS)
-        styles.push('background-color: #f2f2f2');
-        styles.push('font-weight: bold');
-    }
-
-    if (row === 8) { // Row 9 in 1-based (header tabella)
-        styles.push('background-color: #4472c4');
-        styles.push('color: white');
-        styles.push('font-weight: bold');
-        styles.push('text-align: center');
-    }
-
-    // Sezione carburante (righe 18+)
-    if (row >= 17) { // Row 18+ in 1-based
-        styles.push('background-color: #f8f9fa');
-        if (col === 9 || col === 10) { // Colonne J-K (labels)
-            styles.push('font-weight: bold');
-        }
-        if (col >= 13) { // Colonne N+ (valori numerici)
-            styles.push('text-align: right');
-        }
-    }
-
-    // Allineamento dati numerici nelle colonne principali
-    if ((col >= 2 && col <= 7 && row > 8) || (col >= 12 && col <= 17 && row > 8)) {
-        styles.push('text-align: right');
-    }
-
-    // Larghezze colonne per A4
-    const colWidths = [
-        100, 60, 60, 60, 70, 50, 60, 60, 60, 20, // Main section
-        100, 60, 60, 60, 70, 50, 60, 60, 60      // Alternate section
-    ];
-
-    if (col < colWidths.length) {
-        styles.push(`min-width: ${colWidths[col]}px`);
-        styles.push(`width: ${colWidths[col]}px`);
-    }
-
-    // Se SheetJS ha informazioni di stile (versioni Pro), usale
-    if (cell.s) {
-        const style = cell.s;
-
-        if (style.font) {
-            if (style.font.bold) styles.push('font-weight: bold');
-            if (style.font.italic) styles.push('font-style: italic');
-            if (style.font.sz) styles.push(`font-size: ${style.font.sz}pt`);
-            if (style.font.color && style.font.color.rgb) {
-                styles.push(`color: #${style.font.color.rgb}`);
-            }
-        }
-
-        if (style.fill && style.fill.fgColor && style.fill.fgColor.rgb) {
-            styles.push(`background-color: #${style.fill.fgColor.rgb}`);
-        }
-
-        if (style.alignment) {
-            if (style.alignment.horizontal) {
-                styles.push(`text-align: ${style.alignment.horizontal}`);
-            }
-            if (style.alignment.vertical) {
-                const vAlign = style.alignment.vertical === 'center' ? 'middle' : style.alignment.vertical;
-                styles.push(`vertical-align: ${vAlign}`);
-            }
-        }
-
-        if (style.border) {
-            const borderProps = ['top', 'bottom', 'left', 'right'];
-            borderProps.forEach(prop => {
-                if (style.border[prop]) {
-                    const borderStyle = convertBorderStyle(style.border[prop]);
-                    styles.push(`border-${prop}: ${borderStyle}`);
-                }
-            });
-        }
-    }
-
-    return styles.join('; ');
-}
-
-function convertBorderStyle(border) {
-    let width = '1px';
-    let style = 'solid';
-    let color = '#000000';
-
-    if (border.style) {
-        switch (border.style) {
-            case 'thin': width = '1px'; break;
-            case 'medium': width = '2px'; break;
-            case 'thick': width = '3px'; break;
-            case 'double': style = 'double'; break;
-            case 'dotted': style = 'dotted'; break;
-            case 'dashed': style = 'dashed'; break;
-        }
-    }
-
-    if (border.color && border.color.rgb) {
-        color = `#${border.color.rgb}`;
-    }
-
-    return `${width} ${style} ${color}`;
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/[&<>"']/g, (match) => {
-        const escapeMap = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        };
-        return escapeMap[match];
-    });
-}
-
-
-async exportHTMLToPDF() {
-  const el = document.getElementById('htmlPreview');
-  if (!el || !el.innerHTML.trim()) throw new Error('Nessun HTML generato dal workbook');
-
-  const opt = {
-    margin: [5, 5, 5, 5],
-    filename: 'VFRFlightPlanA5.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
-  };
-
-  await html2pdf().set(opt).from(el).save();
-
-  // opzionale: nascondi di nuovo
-  el.style.display = 'none';
-}
-
-    async exportToBasicExcel() {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Flight Plan');
-
-        // Set up headers
-        worksheet.getCell('A1').value = 'VFR FLIGHT PLAN';
-        worksheet.getCell('A1').font = { bold: true, size: 16, color: { argb: '1e3a8a' } };
-
-        // Main trip headers
-        worksheet.getCell('A10').value = 'FIX';
-        worksheet.getCell('B10').value = 'Route';
-        worksheet.getCell('C10').value = 'Alt[Ft]';
-        worksheet.getCell('D10').value = 'Dist[NM]';
-        worksheet.getCell('E10').value = 'Radial';
-        worksheet.getCell('F10').value = 'Flight Time[min]';
-
-        // Style headers
-        ['A10', 'B10', 'C10', 'D10', 'E10', 'F10'].forEach(cell => {
-            worksheet.getCell(cell).fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: '1e3a8a' }
-            };
-            worksheet.getCell(cell).font = { color: { argb: 'FFFFFF' }, bold: true };
-            worksheet.getCell(cell).border = {
-                top: {style:'thin'},
-                left: {style:'thin'},
-                bottom: {style:'thin'},
-                right: {style:'thin'}
-            };
-        });
-
-        // Fill main trip data
-        this.flightData.flightResults.forEach((result, index) => {
-            const row = 11 + index;
-            worksheet.getCell(`A${row}`).value = result.fix;
-            worksheet.getCell(`B${row}`).value = result.route;
-            worksheet.getCell(`C${row}`).value = result.altitude;
-            worksheet.getCell(`D${row}`).value = result.distance;
-            worksheet.getCell(`E${row}`).value = result.radial;
-            worksheet.getCell(`F${row}`).value = result.flightTime;
-
-            // Style data cells
-            ['A', 'B', 'C', 'D', 'E', 'F'].forEach(col => {
-                const cell = worksheet.getCell(`${col}${row}`);
-                cell.font = { color: { argb: '1e3a8a' }, bold: true };
-                cell.border = {
-                    top: {style:'thin'},
-                    left: {style:'thin'},
-                    bottom: {style:'thin'},
-                    right: {style:'thin'}
-                };
-            });
-        });
-
-        // Generate and download
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        this.downloadBlob(blob, 'VFR_Flight_Plan_Basic.xlsx');
-    }
-
-async exportToPDF() {
-    try {
-        if (!this.lastExcelBlob) {
-            throw new Error("Nessun Excel disponibile - esporta prima in XLSX");
-        }
-
-        this.showMessage("🔄 Conversione Excel→PDF in corso...", "info");
-
-        // Chiama la TUA API Vercel (NON ComPDF!)
-        const response = await fetch('/api/ilovepdf-convert', {
-            method: 'POST',
-            body: this.lastExcelBlob
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Errore ${response.status}`);
-        }
-
-        const pdfBlob = await response.blob();
-
-        // Download
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(pdfBlob);
-        link.download = "VFR_FlightPlan_A5.pdf";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        this.showMessage("✅ PDF A5 generato con successo!", "success");
-
-    } catch (error) {
-        console.error("PDF Export Error:", error);
-        this.showMessage(`Errore conversione PDF: ${error.message}`, "error");
-    }
-}
-
-
-
-
-    downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     }
 
     // Utility Methods
-    showLoading(show) {
-        const modal = document.getElementById('loadingModal');
-        if (!modal) return;
+    showMessage(message, type = 'info') {
+        const messageDiv = document.getElementById('message');
+        if (!messageDiv) return;
 
-        if (show) {
-            new bootstrap.Modal(modal).show();
-        } else {
-            const instance = bootstrap.Modal.getInstance(modal);
-            if (instance) instance.hide();
-        }
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
     }
 
-    showMessage(message, type) {
-        // Create a temporary alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'info' ? 'info' : 'warning'} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+    showLoading(show) {
+        const loadingDiv = document.getElementById('loading');
+        if (!loadingDiv) return;
 
-        const container = document.querySelector('.container-fluid');
-        if (container) {
-            container.insertBefore(alertDiv, container.firstChild);
-
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 5000);
-        }
+        loadingDiv.style.display = show ? 'block' : 'none';
     }
 }
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.flightPlanner = new VFRFlightPlanner();
-});
+// Initialize the application when the script loads
+const flightPlanner = new VFRFlightPlanner();
+
+// Export for global access if needed
+window.VFRFlightPlanner = flightPlanner;
