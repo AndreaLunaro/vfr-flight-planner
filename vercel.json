@@ -1,7 +1,12 @@
 {
   "functions": {
-    "api/ilovepdf-convert.js": {
-      "maxDuration": 30
+    "api/html-to-pdf.js": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "runtime": "nodejs18.x"
     }
-  }
+  },
+  "serverExternalPackages": [
+    "@sparticuz/chromium"
+  ]
 }
