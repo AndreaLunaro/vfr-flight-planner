@@ -1,4 +1,4 @@
-// api/html-to-pdf.js - VERSIONE BILANCIATA E LEGGIBILE A4
+// api/html-to-pdf.js - VERSIONE FINALE OTTIMIZZATA A4
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    console.log('Starting PDF generation (BALANCED READABLE A4), HTML length:', htmlContent.length);
+    console.log('Starting PDF generation (FINAL OPTIMIZED A4), HTML length:', htmlContent.length);
 
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);
 
-    // Configurazione A4 LANDSCAPE ottimale per leggibilità
+    // Configurazione A4 LANDSCAPE finale ottimizzata
     await page.setViewport({ 
       width: 1123,  // A4 landscape width
       height: 794,  // A4 landscape height
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // Aspetta caricamento font
     await page.evaluateHandle('document.fonts.ready');
 
-    console.log('Generating BALANCED READABLE A4 PDF...');
+    console.log('Generating FINAL OPTIMIZED A4 PDF...');
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -54,16 +54,16 @@ export default async function handler(req, res) {
       printBackground: true,
       preferCSSPageSize: true,
       margin: {
-        top: '8mm',              // Margini equilibrati
-        right: '8mm', 
-        bottom: '8mm',
-        left: '8mm'
+        top: '6mm',              // Margini ottimizzati finali
+        right: '6mm', 
+        bottom: '6mm',
+        left: '6mm'
       },
       displayHeaderFooter: false,
       scale: 1.0
     });
 
-    console.log(`PDF BALANCED READABLE A4 generated successfully, size: ${pdf.length} bytes`);
+    console.log(`PDF FINAL OPTIMIZED A4 generated successfully, size: ${pdf.length} bytes`);
 
     await page.close();
     await browser.close();
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Readable.pdf"');
+    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Final.pdf"');
     res.setHeader('Content-Length', String(pdf.length));
     return res.end(pdf);
 
