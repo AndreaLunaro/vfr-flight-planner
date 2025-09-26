@@ -1,4 +1,4 @@
-// api/html-to-pdf.js - FINALE per GitHub
+// api/html-to-pdf.js - VERSIONE FINALE COMPLETA
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    console.log('Starting PDF generation, HTML length:', htmlContent.length);
+    console.log('Starting PDF generation (LANDSCAPE + ETO/ATO/RETO), HTML length:', htmlContent.length);
 
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
@@ -28,10 +28,10 @@ export default async function handler(req, res) {
     const page = await browser.newPage();
     page.setDefaultTimeout(25000);
 
-    // Configurazione A4 ottimizzata
+    // Configurazione A4 LANDSCAPE ottimizzata
     await page.setViewport({ 
-      width: 794,   // A4 width in pixels at 96 DPI
-      height: 1123, // A4 height in pixels at 96 DPI
+      width: 1123,  // A4 landscape width
+      height: 794,  // A4 landscape height
       deviceScaleFactor: 1
     });
 
@@ -46,23 +46,24 @@ export default async function handler(req, res) {
     // Aspetta caricamento font
     await page.evaluateHandle('document.fonts.ready');
 
-    console.log('Generating PDF with A4 format...');
+    console.log('Generating PDF with A4 LANDSCAPE format + ETO/ATO/RETO columns...');
 
     const pdf = await page.pdf({
       format: 'A4',
+      landscape: true,           // Orientamento orizzontale
       printBackground: true,
       preferCSSPageSize: true,
       margin: {
-        top: '12mm',
-        right: '8mm',
-        bottom: '12mm',
+        top: '8mm',
+        right: '8mm', 
+        bottom: '8mm',
         left: '8mm'
       },
       displayHeaderFooter: false,
       scale: 1.0
     });
 
-    console.log(`PDF generated successfully, size: ${pdf.length} bytes`);
+    console.log(`PDF LANDSCAPE with ETO/ATO/RETO generated successfully, size: ${pdf.length} bytes`);
 
     await page.close();
     await browser.close();
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
 
     res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Template.pdf"');
+    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Complete.pdf"');
     res.setHeader('Content-Length', String(pdf.length));
     return res.end(pdf);
 
