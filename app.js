@@ -1,5 +1,5 @@
-// VFR Flight Planner JavaScript Application - FINALE PER GITHUB
-// Enhanced with Excel→HTML→PDF Export Integration
+// VFR Flight Planner JavaScript Application - VERSIONE FINALE COMPLETA v2.1.0
+// Enhanced with Excel→HTML→PDF Export Integration + Landscape + ETO/ATO/RETO
 class VFRFlightPlanner {
     constructor() {
         this.flightData = {
@@ -102,7 +102,7 @@ class VFRFlightPlanner {
         if (exportBtn) {
             exportBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.exportExcelAndPDF(); // NUOVA FUNZIONE
+                this.exportExcelAndPDF(); // FUNZIONE INTEGRATA
             });
         }
 
@@ -146,6 +146,7 @@ class VFRFlightPlanner {
             });
         }
     }
+
     addWaypointInputs() {
         const numWaypointsInput = document.getElementById('numWaypoints');
         if (!numWaypointsInput) return;
@@ -223,7 +224,6 @@ class VFRFlightPlanner {
             this.updateAlternateFuelDisplay();
         }
     }
-
     async calculateFlightData() {
         this.showLoading(true);
         try {
@@ -472,7 +472,7 @@ class VFRFlightPlanner {
         this.updateAlternateFuelDisplay();
     }
 
-    // ===== NUOVE FUNZIONI DI EXPORT EXCEL + PDF =====
+    // ===== EXPORT FUNCTIONS INTEGRATE (Excel + PDF) =====
 
     // FUNZIONE PRINCIPALE: Export Excel + PDF insieme
     async exportExcelAndPDF() {
@@ -488,15 +488,15 @@ class VFRFlightPlanner {
             // Step 1: Genera Excel (come prima)
             await this.exportToExcelWithTemplate();
 
-            // Step 2: Genera HTML che replica l'Excel
-            this.showMessage('Generazione HTML replica Excel...', 'info');
+            // Step 2: Genera HTML COMPLETO con ETO/ATO/RETO e spaziature
+            this.showMessage('Generazione HTML template completo...', 'info');
             this.lastGeneratedHTML = this.generateExcelReplicaHTML();
 
-            // Step 3: Converti HTML in PDF
-            this.showMessage('Conversione HTML→PDF in corso...', 'info');
+            // Step 3: Converti HTML in PDF LANDSCAPE
+            this.showMessage('Conversione HTML→PDF LANDSCAPE in corso...', 'info');
             await this.generatePDFFromHTML();
 
-            this.showMessage('Export completato! Excel e PDF scaricati con successo.', 'success');
+            this.showMessage('Export completato! Excel e PDF completo scaricati con successo.', 'success');
 
         } catch (error) {
             console.error('Export error:', error);
@@ -504,9 +504,7 @@ class VFRFlightPlanner {
         } finally {
             this.showLoading(false);
         }
-    }
-
-    // NUOVA FUNZIONE: Genera HTML che replica PERFETTAMENTE il template Excel
+    }    // VERSIONE FINALE COMPLETA: Landscape + ETO/ATO/RETO + Spaziature Template Excel
     generateExcelReplicaHTML() {
         const currentDate = new Date().toLocaleDateString('it-IT');
         const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -525,11 +523,11 @@ class VFRFlightPlanner {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VFR Flight Plan - Template Excel Replica</title>
+    <title>VFR Flight Plan - Complete Template</title>
     <style>
         @page {
-            size: A4 portrait;
-            margin: 12mm 8mm;
+            size: A4 landscape;
+            margin: 8mm;
         }
 
         * {
@@ -540,162 +538,169 @@ class VFRFlightPlanner {
 
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 9px;
-            line-height: 1.1;
+            font-size: 7px;
+            line-height: 1.0;
             color: #000;
             background: #fff;
             width: 100%;
             height: 100vh;
         }
 
-        /* Container principale che replica Excel */
+        /* Container ottimizzato per landscape completo */
         .flight-plan-container {
             width: 100%;
-            max-width: 190mm;
+            max-width: 281mm;
             margin: 0 auto;
             background: #fff;
             border: 1px solid #000;
         }
 
-        /* Header principale */
+        /* Header compatto */
         .main-header {
             text-align: center;
             background: #1e40af;
             color: white;
-            padding: 6px;
-            font-size: 14px;
+            padding: 3px;
+            font-size: 11px;
             font-weight: bold;
             border-bottom: 2px solid #000;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
-        /* Info generali */
+        /* Info generali in riga singola */
         .flight-info {
             display: flex;
             justify-content: space-between;
-            padding: 4px 8px;
+            padding: 2px 4px;
             background: #f8fafc;
             border-bottom: 1px solid #ccc;
-            font-size: 9px;
+            font-size: 7px;
         }
 
         .info-left, .info-center, .info-right {
             flex: 1;
+            font-size: 6px;
         }
 
-        /* Tabella principale */
+        /* Tabella principale con colonne ETO/ATO/RETO */
         .flight-table {
             width: 100%;
             border-collapse: collapse;
             border-spacing: 0;
             margin: 0;
+            font-size: 6px;
         }
 
         .flight-table th {
             background: #1e40af;
             color: white;
             font-weight: bold;
-            font-size: 8px;
-            padding: 3px 2px;
+            font-size: 6px;
+            padding: 1px;
             text-align: center;
             border: 1px solid #000;
-            height: 20px;
+            height: 14px;
         }
 
         .flight-table td {
             border: 1px solid #666;
-            padding: 2px 3px;
+            padding: 1px 2px;
             text-align: center;
-            font-size: 8px;
-            height: 18px;
+            font-size: 6px;
+            height: 12px;
             vertical-align: middle;
         }
 
-        /* Stili specifici per le sezioni */
         .waypoint-name {
             text-align: left !important;
             font-weight: bold;
-            padding-left: 4px;
+            padding-left: 2px;
+            font-size: 5px;
         }
 
-        .fuel-section {
-            background: #e0f2fe;
-            font-weight: bold;
-        }
-
-        .total-section {
+        /* Stile per colonne ETO/ATO/RETO */
+        .time-column {
             background: #f0f9ff;
-            font-weight: bold;
+            font-size: 5px;
         }
 
-        /* Sezione fuel summary */
-        .fuel-summary {
-            margin-top: 8px;
+        /* Spaziature tra sezioni come nel template Excel */
+        .section-spacer {
+            height: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+
+        .section-header {
+            background: #1e40af;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            font-size: 8px;
+            padding: 2px;
             border: 1px solid #000;
         }
 
-        .fuel-summary table {
+        /* Layout landscape per fuel e block times */
+        .landscape-section {
+            display: flex;
+            gap: 6px;
+            margin-top: 3px;
+        }
+
+        .fuel-summary, .block-times {
+            flex: 1;
+            border: 1px solid #000;
+        }
+
+        .fuel-summary table, .block-times table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .fuel-summary th {
+        .fuel-summary th, .block-times th {
             background: #1e40af;
             color: white;
-            padding: 4px;
-            font-size: 9px;
+            padding: 1px;
+            font-size: 7px;
             text-align: center;
             border: 1px solid #000;
         }
 
-        .fuel-summary td {
-            padding: 3px 6px;
+        .fuel-summary td, .block-times td {
+            padding: 1px 3px;
             border: 1px solid #666;
-            font-size: 8px;
+            font-size: 6px;
         }
 
         .fuel-label {
             text-align: left;
             font-weight: bold;
             background: #f8fafc;
+            font-size: 5px;
         }
 
         .fuel-value {
             text-align: center;
             font-weight: bold;
+            font-size: 6px;
         }
 
-        /* Sezione block times */
-        .block-times {
-            margin-top: 6px;
-            border: 1px solid #000;
-        }
-
-        .block-times table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .block-times td {
-            padding: 3px 6px;
-            border: 1px solid #666;
-            font-size: 8px;
-        }
-
-        /* Footer info */
+        /* Footer compatto */
         .footer-info {
-            margin-top: 8px;
-            padding: 4px;
-            font-size: 7px;
+            margin-top: 3px;
+            padding: 1px;
+            font-size: 5px;
             color: #666;
             text-align: center;
             border-top: 1px solid #ccc;
         }
 
-        /* Print specific */
+        /* Print specific per landscape */
         @media print {
             body { margin: 0; }
             .flight-plan-container { max-width: 100%; }
+            @page { size: A4 landscape; }
         }
     </style>
 </head>
@@ -704,54 +709,47 @@ class VFRFlightPlanner {
 
         <!-- Header Principale -->
         <div class="main-header">
-            VFR FLIGHT PLAN - PIANO DI VOLO VFR
+            VFR FLIGHT PLAN - PIANO DI VOLO VFR (COMPLETE TEMPLATE)
         </div>
 
         <!-- Info Generali -->
         <div class="flight-info">
             <div class="info-left">
-                <strong>Data:</strong> ${currentDate}<br>
-                <strong>Ora:</strong> ${currentTime}
+                <strong>Data:</strong> ${currentDate} | <strong>Ora:</strong> ${currentTime}
             </div>
             <div class="info-center">
-                <strong>Velocità:</strong> ${flightSpeed} kt<br>
-                <strong>Consumo:</strong> ${fuelConsumption} l/h
+                <strong>Velocità:</strong> ${flightSpeed} kt | <strong>Consumo:</strong> ${fuelConsumption} l/h
             </div>
             <div class="info-right">
-                <strong>Totale Distanza:</strong> ${Math.round(totalDistance * 10) / 10} NM<br>
-                <strong>Tempo Totale:</strong> ${Math.round(totalFlightTime)} min
+                <strong>Dist. Tot:</strong> ${Math.round(totalDistance * 10) / 10} NM | <strong>Tempo Tot:</strong> ${Math.round(totalFlightTime)} min
             </div>
         </div>
 
-        <!-- Tabella Principale -->
+        <!-- Sezione Header Main Flight Plan -->
+        <div class="section-header">MAIN FLIGHT PLAN</div>
+
+        <!-- Tabella Principale con ETO/ATO/RETO -->
         <table class="flight-table">
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 15%;">FIX</th>
-                    <th rowspan="2" style="width: 8%;">Route</th>
-                    <th rowspan="2" style="width: 10%;">Alt[Ft]</th>
-                    <th rowspan="2" style="width: 10%;">Dist[NM]</th>
-                    <th rowspan="2" style="width: 8%;">Radial</th>
-                    <th rowspan="2" style="width: 12%;">Flight Time[min]</th>
-                    <th colspan="6" style="background: #dc2626; color: white;">ALTERNATE AIRPORT</th>
-                </tr>
-                <tr>
-                    <th style="width: 15%;">FIX ALT</th>
-                    <th style="width: 8%;">Route</th>
-                    <th style="width: 10%;">Alt[Ft]</th>
-                    <th style="width: 10%;">Dist[NM]</th>
-                    <th style="width: 8%;">Radial</th>
-                    <th style="width: 12%;">Flight Time[min]</th>
+                    <th style="width: 10%;">FIX</th>
+                    <th style="width: 6%;">Route</th>
+                    <th style="width: 7%;">Alt[Ft]</th>
+                    <th style="width: 7%;">Dist[NM]</th>
+                    <th style="width: 6%;">Radial</th>
+                    <th style="width: 8%;">Flight Time[min]</th>
+                    <th style="width: 8%;">ETO</th>
+                    <th style="width: 8%;">ATO</th>
+                    <th style="width: 8%;">RETO</th>
                 </tr>
             </thead>
             <tbody>`;
 
-        // Genera righe dati (massimo 15 righe per replicare Excel)
-        const maxRows = 15;
-        for (let i = 0; i < maxRows; i++) {
+        // Genera righe main flight plan (massimo 8 righe per landscape)
+        const maxMainRows = 8;
+        for (let i = 0; i < maxMainRows; i++) {
             html += `<tr>`;
 
-            // Main route data
             if (this.flightData.flightResults && i < this.flightData.flightResults.length) {
                 const result = this.flightData.flightResults[i];
                 html += `
@@ -761,24 +759,13 @@ class VFRFlightPlanner {
                     <td>${i > 0 ? Math.round(result.distance || 0) : '---'}</td>
                     <td>${i > 0 ? Math.round(parseFloat(result.radial) || 0) : '---'}</td>
                     <td>${i > 0 ? Math.round(result.flightTime || 0) : '---'}</td>
+                    <td class="time-column">____</td>
+                    <td class="time-column">____</td>
+                    <td class="time-column">____</td>
                 `;
             } else {
-                html += `<td></td><td></td><td></td><td></td><td></td><td></td>`;
-            }
-
-            // Alternate route data
-            if (this.flightData.alternateResults && i < this.flightData.alternateResults.length) {
-                const altResult = this.flightData.alternateResults[i];
-                html += `
-                    <td class="waypoint-name">${altResult.fix.split(',')[0]}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(altResult.route) || 0) : '---'}</td>
-                    <td>${Math.round(altResult.altitude || 0)}</td>
-                    <td>${i > 0 ? Math.round(altResult.distance || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(altResult.radial) || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(altResult.flightTime || 0) : '---'}</td>
-                `;
-            } else {
-                html += `<td></td><td></td><td></td><td></td><td></td><td></td>`;
+                html += `<td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
             }
 
             html += `</tr>`;
@@ -788,63 +775,139 @@ class VFRFlightPlanner {
             </tbody>
         </table>
 
-        <!-- Sezione Carburante -->
-        <div class="fuel-summary">
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan="4">FUEL CALCULATION - CALCOLO CARBURANTE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="fuel-label">Trip Fuel (Carburante Viaggio):</td>
-                        <td class="fuel-value">${this.flightData.fuelData.tripFuel || 0} L</td>
-                        <td class="fuel-label">Alternate Fuel (Carburante Alternato):</td>
-                        <td class="fuel-value">${this.flightData.alternateFuelData.alternateFuel || 0} L</td>
-                    </tr>
-                    <tr>
-                        <td class="fuel-label">Contingency Fuel (5%):</td>
-                        <td class="fuel-value">${this.flightData.fuelData.contingencyFuel || 0} L</td>
-                        <td class="fuel-label">Reserve Fuel (45 min):</td>
-                        <td class="fuel-value">${this.flightData.fuelData.reserveFuel || 0} L</td>
-                    </tr>
-                    <tr style="background: #fef3c7;">
-                        <td class="fuel-label"><strong>TOTAL FUEL REQUIRED:</strong></td>
-                        <td class="fuel-value"><strong>${totalFuel} L</strong></td>
-                        <td class="fuel-label">Fuel on Board:</td>
-                        <td class="fuel-value">_____ L</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <!-- Spaziatura tra main e alternate (come nel template Excel) -->
+        <div class="section-spacer"></div>
 
-        <!-- Block Times -->
-        <div class="block-times">
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan="8">BLOCK TIMES - TEMPI BLOCCO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="fuel-label">Block Out:</td>
-                        <td>_____</td>
-                        <td class="fuel-label">Block In:</td>
-                        <td>_____</td>
-                        <td class="fuel-label">Block Time:</td>
-                        <td>_____ min</td>
-                        <td class="fuel-label">Total Flight Time:</td>
-                        <td><strong>${Math.round(totalFlightTime)} min</strong></td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Sezione Header Alternate Airport -->
+        <div class="section-header">ALTERNATE AIRPORT</div>
+
+        <!-- Tabella Alternate con ETO/ATO/RETO -->
+        <table class="flight-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">FIX ALT</th>
+                    <th style="width: 6%;">Route</th>
+                    <th style="width: 7%;">Alt[Ft]</th>
+                    <th style="width: 7%;">Dist[NM]</th>
+                    <th style="width: 6%;">Radial</th>
+                    <th style="width: 8%;">Flight Time[min]</th>
+                    <th style="width: 8%;">ETO</th>
+                    <th style="width: 8%;">ATO</th>
+                    <th style="width: 8%;">RETO</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        // Genera righe alternate (massimo 5 righe)
+        const maxAltRows = 5;
+        for (let i = 0; i < maxAltRows; i++) {
+            html += `<tr>`;
+
+            if (this.flightData.alternateResults && i < this.flightData.alternateResults.length) {
+                const altResult = this.flightData.alternateResults[i];
+                html += `
+                    <td class="waypoint-name">${altResult.fix.split(',')[0]}</td>
+                    <td>${i > 0 ? Math.round(parseFloat(altResult.route) || 0) : '---'}</td>
+                    <td>${Math.round(altResult.altitude || 0)}</td>
+                    <td>${i > 0 ? Math.round(altResult.distance || 0) : '---'}</td>
+                    <td>${i > 0 ? Math.round(parseFloat(altResult.radial) || 0) : '---'}</td>
+                    <td>${i > 0 ? Math.round(altResult.flightTime || 0) : '---'}</td>
+                    <td class="time-column">____</td>
+                    <td class="time-column">____</td>
+                    <td class="time-column">____</td>
+                `;
+            } else {
+                html += `<td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
+            }
+
+            html += `</tr>`;
+        }
+
+        html += `
+            </tbody>
+        </table>
+
+        <!-- Sezioni Fuel e Block Times affiancate per landscape -->
+        <div class="landscape-section">
+            <!-- Sezione Carburante -->
+            <div class="fuel-summary">
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2">FUEL CALCULATION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fuel-label">Trip Fuel:</td>
+                            <td class="fuel-value">${this.flightData.fuelData.tripFuel || 0} L</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Alternate Fuel:</td>
+                            <td class="fuel-value">${this.flightData.alternateFuelData.alternateFuel || 0} L</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Contingency (5%):</td>
+                            <td class="fuel-value">${this.flightData.fuelData.contingencyFuel || 0} L</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Reserve (45min):</td>
+                            <td class="fuel-value">${this.flightData.fuelData.reserveFuel || 0} L</td>
+                        </tr>
+                        <tr style="background: #fef3c7;">
+                            <td class="fuel-label"><strong>TOTAL REQUIRED:</strong></td>
+                            <td class="fuel-value"><strong>${totalFuel} L</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Fuel on Board:</td>
+                            <td class="fuel-value">_____ L</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Block Times -->
+            <div class="block-times">
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2">BLOCK TIMES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fuel-label">Block Out:</td>
+                            <td class="fuel-value">_____</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Block In:</td>
+                            <td class="fuel-value">_____</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Block Time:</td>
+                            <td class="fuel-value">_____ min</td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Total Flight:</td>
+                            <td class="fuel-value"><strong>${Math.round(totalFlightTime)} min</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Total Distance:</td>
+                            <td class="fuel-value"><strong>${Math.round(totalDistance * 10) / 10} NM</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="fuel-label">Avg Ground Speed:</td>
+                            <td class="fuel-value">${totalFlightTime > 0 ? Math.round(totalDistance / (totalFlightTime/60) * 10) / 10 : 0} kt</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Footer -->
         <div class="footer-info">
-            Generated by VFR Flight Planner - ${currentDate} ${currentTime}
+            Generated by VFR Flight Planner (Complete Template) - ${currentDate} ${currentTime}
         </div>
 
     </div>
@@ -853,7 +916,6 @@ class VFRFlightPlanner {
 
         return html;
     }
-
     // FUNZIONE: Converte HTML in PDF tramite API
     async generatePDFFromHTML() {
         try {
@@ -861,7 +923,7 @@ class VFRFlightPlanner {
                 throw new Error('Nessun HTML generato - errore interno');
             }
 
-            console.log('Calling HTML to PDF API...');
+            console.log('Calling HTML to PDF API (LANDSCAPE + ETO/ATO/RETO)...');
 
             const response = await fetch('/api/html-to-pdf', {
                 method: 'POST',
@@ -884,7 +946,7 @@ class VFRFlightPlanner {
                 throw new Error(errorMessage);
             }
 
-            console.log('PDF response received, downloading...');
+            console.log('PDF LANDSCAPE response received, downloading...');
 
             const pdfBlob = await response.blob();
 
@@ -893,9 +955,9 @@ class VFRFlightPlanner {
             }
 
             // Download PDF
-            this.downloadBlob(pdfBlob, 'VFR-Flight-Plan-Template.pdf');
+            this.downloadBlob(pdfBlob, 'VFR-Flight-Plan-Complete.pdf');
 
-            console.log('PDF downloaded successfully');
+            console.log('PDF LANDSCAPE downloaded successfully');
 
         } catch (error) {
             console.error('PDF Generation Error:', error);
@@ -1002,7 +1064,7 @@ class VFRFlightPlanner {
         URL.revokeObjectURL(url);
     }
 
-    // ===== UI UPDATE FUNCTIONS (MANTENUTE IDENTICHE) =====
+    // ===== UI UPDATE FUNCTIONS =====
 
     updateFlightTable() {
         const tbody = document.getElementById('flightTableBody');
@@ -1115,7 +1177,7 @@ class VFRFlightPlanner {
         this.showMessage('Piano di volo resettato con successo', 'success');
     }
 
-    // ===== WEIGHT & BALANCE METHODS (MANTENUTE IDENTICHE) =====
+    // ===== WEIGHT & BALANCE METHODS =====
 
     initializeWeightBalanceTable() {
         const tbody = document.getElementById('wbTableBody');
@@ -1349,7 +1411,7 @@ class VFRFlightPlanner {
         this.showMessage('Envelope aggiornato con successo', 'success');
     }
 
-    // ===== UTILITY METHODS (MANTENUTE IDENTICHE) =====
+    // ===== UTILITY METHODS =====
 
     showLoading(show) {
         const modal = document.getElementById('loadingModal');
