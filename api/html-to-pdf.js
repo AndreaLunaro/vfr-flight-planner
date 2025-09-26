@@ -14,14 +14,13 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    // Config Vercel: usa Chromium di Sparticuz
-    const executablePath = await chromium.executablePath();
+    const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: { width: 1240, height: 1754 },
-      executablePath,
+      executablePath: execPath,
       headless: chromium.headless,
-      ignoreHTTPSErrors: true,
+      defaultViewport: { width: 1240, height: 1754 },
+      ignoreHTTPSErrors: true
     });
 
     const page = await browser.newPage();
@@ -39,9 +38,11 @@ export default async function handler(req, res) {
     await browser.close();
     browser = null;
 
+    res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="flight-plan.pdf"');
-    return res.send(pdf);
+    res.setHeader('Content-Length', String(pdf.length));
+    return res.end(pdf);
   } catch (err) {
     if (browser) { try { await browser.close(); } catch {} }
     console.error('PDF Generation Error:', err);
