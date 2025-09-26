@@ -1,14 +1,10 @@
 {
-  "name": "vfr-planner-excel-pdf",
+  "name": "vfr-planner-simple",
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "@sparticuz/chromium": "^131.0.0",
-    "puppeteer-core": "^23.10.4",
+    "puppeteer": "^23.10.4",
     "exceljs": "^4.4.0"
-  },
-  "devDependencies": {
-    "puppeteer": "^23.10.4"
   },
   "engines": {
     "node": ">=18"
