@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "puppeteer": "^21.0.0",    
+    "puppeteer": "^24.10.2",    
     "exceljs": "^4.4.0"
   },
   "engines": {
