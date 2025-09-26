@@ -28,6 +28,7 @@ class VFRFlightPlanner {
 
         this.lastWorkbook = null;
         this.lastExcelBlob = null;
+        this.lastHtmlContent = null; // Nuovo: per salvare il contenuto HTML
 
         this.init();
     }
@@ -95,11 +96,21 @@ class VFRFlightPlanner {
             });
         }
 
+        // Modificato: export button ora gestisce sia Excel che PDF
         const exportBtn = document.getElementById('exportPlan');
         if (exportBtn) {
             exportBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.exportPlan();
+            });
+        }
+
+        // Nuovo: pulsante per solo PDF
+        const exportPdfBtn = document.getElementById('exportPdf');
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.exportPdfOnly();
             });
         }
 
@@ -143,14 +154,12 @@ class VFRFlightPlanner {
             });
         }
     }
-
     addWaypointInputs() {
         const numWaypointsInput = document.getElementById('numWaypoints');
         if (!numWaypointsInput) return;
 
         const numWaypoints = parseInt(numWaypointsInput.value) || 2;
         const container = document.getElementById('waypointInputs');
-
         if (!container) return;
 
         if (numWaypoints < 2 || numWaypoints > 20) {
@@ -160,17 +169,16 @@ class VFRFlightPlanner {
         }
 
         container.innerHTML = '';
-
         for (let i = 0; i < numWaypoints; i++) {
             const div = document.createElement('div');
             div.className = 'waypoint-input';
             div.innerHTML = `
                 <label for="waypoint${i}" class="form-label aviation-label">Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input" id="waypoint${i}" placeholder="Nome città (es. Roma, Milano)" autocomplete="off">
+                <input type="text" class="form-control aviation-input" id="waypoint${i}" 
+                       placeholder="Nome città (es. Roma, Milano)" autocomplete="off">
             `;
             container.appendChild(div);
         }
-
         this.showMessage(`${numWaypoints} campi waypoint generati con successo`, 'success');
     }
 
@@ -180,7 +188,6 @@ class VFRFlightPlanner {
 
         const numWaypoints = parseInt(numAlternateWaypointsInput.value) || 2;
         const container = document.getElementById('alternateInputs');
-
         if (!container) return;
 
         if (numWaypoints < 2 || numWaypoints > 10) {
@@ -190,17 +197,16 @@ class VFRFlightPlanner {
         }
 
         container.innerHTML = '';
-
         for (let i = 0; i < numWaypoints; i++) {
             const div = document.createElement('div');
             div.className = 'waypoint-input';
             div.innerHTML = `
                 <label for="alternateWaypoint${i}" class="form-label aviation-label">Alternate Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input" id="alternateWaypoint${i}" placeholder="Nome città (es. Napoli, Venezia)" autocomplete="off">
+                <input type="text" class="form-control aviation-input" id="alternateWaypoint${i}" 
+                       placeholder="Nome città (es. Napoli, Venezia)" autocomplete="off">
             `;
             container.appendChild(div);
         }
-
         this.showMessage(`${numWaypoints} campi waypoint alternati generati con successo`, 'success');
     }
 
@@ -228,7 +234,6 @@ class VFRFlightPlanner {
 
     async calculateFlightData() {
         this.showLoading(true);
-
         try {
             // Get waypoint names
             const numWaypointsInput = document.getElementById('numWaypoints');
@@ -240,7 +245,6 @@ class VFRFlightPlanner {
             for (let i = 0; i < numWaypoints; i++) {
                 const input = document.getElementById(`waypoint${i}`);
                 if (!input) continue;
-
                 const value = input.value.trim();
                 if (!value) {
                     throw new Error(`Waypoint ${i + 1} è obbligatorio`);
@@ -281,6 +285,9 @@ class VFRFlightPlanner {
             const exportBtn = document.getElementById('exportPlan');
             if (exportBtn) exportBtn.disabled = false;
 
+            const exportPdfBtn = document.getElementById('exportPdf');
+            if (exportPdfBtn) exportPdfBtn.disabled = false;
+
             this.showMessage('Calcoli completati con successo! I risultati sono visibili nelle tabelle.', 'success');
 
         } catch (error) {
@@ -293,15 +300,12 @@ class VFRFlightPlanner {
 
     async geocodeWaypoints(waypoints) {
         const geocoded = [];
-
         for (const waypoint of waypoints) {
             const query = `${waypoint}, Italia`;
-
             try {
                 // Try Nominatim
                 const coords = await this.geocodeWithNominatim(query);
                 const elevation = await this.getElevation(coords.lat, coords.lon);
-
                 geocoded.push({
                     name: waypoint,
                     lat: coords.lat,
@@ -313,13 +317,11 @@ class VFRFlightPlanner {
                 throw new Error(`Impossibile geocodificare: ${waypoint}`);
             }
         }
-
         return geocoded;
     }
 
     async geocodeWithNominatim(query) {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`;
-
         const response = await fetch(url, {
             headers: {
                 'User-Agent': 'VFR Flight Planner App'
@@ -331,7 +333,6 @@ class VFRFlightPlanner {
         }
 
         const data = await response.json();
-
         if (data.length === 0) {
             throw new Error(`Nessun risultato trovato per: ${query}`);
         }
@@ -346,7 +347,6 @@ class VFRFlightPlanner {
         try {
             const url = `https://api.opentopodata.org/v1/eudem25m?locations=${lat},${lon}`;
             const response = await fetch(url);
-
             if (response.ok) {
                 const data = await response.json();
                 if (data.results && data.results.length > 0) {
@@ -357,13 +357,11 @@ class VFRFlightPlanner {
         } catch (error) {
             console.warn('Elevation API error:', error);
         }
-
         return this.constants.baseAltitude; // Default altitude
     }
 
     async calculateRoute(waypoints) {
         const results = [];
-
         for (let i = 0; i < waypoints.length; i++) {
             const waypoint = waypoints[i];
             let distance = 0;
@@ -394,22 +392,17 @@ class VFRFlightPlanner {
                 flightTime: flightTime
             });
         }
-
         return results;
     }
-
     calculateDistance(lat1, lon1, lat2, lon2) {
         const R = this.constants.earthRadius;
         const dLat = this.toRadians(lat2 - lat1);
         const dLon = this.toRadians(lon2 - lon1);
-
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         const distanceKm = R * c;
-
         return distanceKm / this.constants.nauticalMileKm;
     }
 
@@ -417,10 +410,8 @@ class VFRFlightPlanner {
         const dLon = this.toRadians(lon2 - lon1);
         const lat1Rad = this.toRadians(lat1);
         const lat2Rad = this.toRadians(lat2);
-
         const y = Math.sin(dLon) * Math.cos(lat2Rad);
         const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
-
         let bearing = this.toDegrees(Math.atan2(y, x));
         return (bearing + 360) % 360;
     }
@@ -457,7 +448,6 @@ class VFRFlightPlanner {
         const fuelConsumption = parseFloat(fuelConsumptionInput ? fuelConsumptionInput.value : 30) || 30;
 
         const alternateFuel = Math.round((totalTime * 0.01666 * fuelConsumption) * 10) / 10;
-
         this.flightData.alternateFuelData = {
             alternateFuel
         };
@@ -473,7 +463,6 @@ class VFRFlightPlanner {
         for (let i = 0; i < numWaypoints; i++) {
             const input = document.getElementById(`alternateWaypoint${i}`);
             if (!input) continue;
-
             const value = input.value.trim();
             if (!value) {
                 throw new Error(`Alternate Waypoint ${i + 1} è obbligatorio`);
@@ -488,18 +477,438 @@ class VFRFlightPlanner {
         const geocodedAlternateWaypoints = await this.geocodeWaypoints(alternateWaypoints);
         this.flightData.alternateWaypoints = geocodedAlternateWaypoints;
         this.flightData.alternateResults = await this.calculateRoute(geocodedAlternateWaypoints);
-
         this.calculateAlternateFuelData();
         this.updateAlternateTable();
         this.updateAlternateFuelDisplay();
     }
 
+    // NUOVA FUNZIONE: Genera contenuto HTML formattato come Excel
+    generateFormattedHTML() {
+        const currentDate = new Date().toLocaleDateString('it-IT');
+        const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+        let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                @page {
+                    size: A5;
+                    margin: 10mm;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 10px;
+                    line-height: 1.2;
+                    margin: 0;
+                    padding: 0;
+                    color: #000;
+                }
+
+                .header {
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 14px;
+                    margin-bottom: 15px;
+                    border-bottom: 2px solid #1e3a8a;
+                    padding-bottom: 5px;
+                }
+
+                .flight-info {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 10px;
+                    font-size: 9px;
+                }
+
+                .section-title {
+                    font-weight: bold;
+                    font-size: 11px;
+                    margin: 10px 0 5px 0;
+                    color: #1e3a8a;
+                    border-bottom: 1px solid #ccc;
+                    padding-bottom: 2px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 8px;
+                    margin-bottom: 10px;
+                }
+
+                th, td {
+                    border: 1px solid #333;
+                    padding: 2px;
+                    text-align: center;
+                }
+
+                th {
+                    background-color: #1e3a8a;
+                    color: white;
+                    font-weight: bold;
+                }
+
+                .fuel-section {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                    margin: 10px 0;
+                }
+
+                .fuel-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 2px;
+                    border: 1px solid #ccc;
+                    font-size: 9px;
+                }
+
+                .fuel-label {
+                    font-weight: bold;
+                }
+
+                .wb-section {
+                    margin-top: 10px;
+                }
+
+                .wb-table {
+                    font-size: 8px;
+                }
+
+                .total-row {
+                    font-weight: bold;
+                    background-color: #f0f0f0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                VFR FLIGHT PLAN
+            </div>
+
+            <div class="flight-info">
+                <div>Data: ${currentDate}</div>
+                <div>Ora: ${currentTime}</div>
+            </div>
+
+            <div class="section-title">Parametri di Volo</div>
+            <div class="flight-info">
+                <div>Velocità: ${document.getElementById('flightSpeed')?.value || 90} kt</div>
+                <div>Consumo: ${document.getElementById('fuelConsumption')?.value || 30} l/h</div>
+            </div>
+
+            <div class="section-title">Trip Principale</div>
+            <table>
+                <tr>
+                    <th>FIX</th>
+                    <th>Route</th>
+                    <th>Alt[Ft]</th>
+                    <th>Dist[NM]</th>
+                    <th>Radial</th>
+                    <th>Flight Time[min]</th>
+                </tr>`;
+
+        // Aggiungi righe dei waypoints principali
+        this.flightData.flightResults.forEach(result => {
+            html += `
+                <tr>
+                    <td>${result.fix}</td>
+                    <td>${result.route}</td>
+                    <td>${result.altitude}</td>
+                    <td>${result.distance}</td>
+                    <td>${result.radial}</td>
+                    <td>${result.flightTime}</td>
+                </tr>`;
+        });
+
+        html += `
+            </table>`;
+
+        // Sezione carburante
+        const fuel = this.flightData.fuelData;
+        if (fuel && fuel.tripFuel) {
+            html += `
+            <div class="fuel-section">
+                <div class="fuel-item">
+                    <span class="fuel-label">Trip Fuel:</span>
+                    <span>${fuel.tripFuel} litri</span>
+                </div>
+                <div class="fuel-item">
+                    <span class="fuel-label">Contingency Fuel:</span>
+                    <span>${fuel.contingencyFuel} litri</span>
+                </div>
+                <div class="fuel-item">
+                    <span class="fuel-label">Reserve Fuel:</span>
+                    <span>${fuel.reserveFuel} litri</span>
+                </div>
+                <div class="fuel-item">
+                    <span class="fuel-label">Total Fuel:</span>
+                    <span>${fuel.totalFuel} litri</span>
+                </div>
+            </div>`;
+        }
+
+        // Sezione aeroporto alternato se presente
+        if (this.flightData.alternateResults && this.flightData.alternateResults.length > 0) {
+            html += `
+            <div class="section-title">Aeroporto Alternato</div>
+            <table>
+                <tr>
+                    <th>FIX</th>
+                    <th>Route</th>
+                    <th>Alt[Ft]</th>
+                    <th>Dist[NM]</th>
+                    <th>Radial</th>
+                    <th>Flight Time[min]</th>
+                </tr>`;
+
+            this.flightData.alternateResults.forEach(result => {
+                html += `
+                <tr>
+                    <td>${result.fix}</td>
+                    <td>${result.route}</td>
+                    <td>${result.altitude}</td>
+                    <td>${result.distance}</td>
+                    <td>${result.radial}</td>
+                    <td>${result.flightTime}</td>
+                </tr>`;
+            });
+
+            html += `</table>`;
+
+            if (this.flightData.alternateFuelData && this.flightData.alternateFuelData.alternateFuel) {
+                html += `
+                <div class="fuel-item">
+                    <span class="fuel-label">Alternate Fuel:</span>
+                    <span>${this.flightData.alternateFuelData.alternateFuel} litri</span>
+                </div>`;
+            }
+        }
+
+        // Sezione Weight & Balance
+        html += `
+            <div class="section-title">Weight and Balance Data</div>
+            <table class="wb-table">
+                <tr>
+                    <th>Item</th>
+                    <th>Weight[kg]</th>
+                    <th>Arm[m]</th>
+                    <th>Moment</th>
+                </tr>`;
+
+        // Aggiungi dati Weight & Balance
+        this.weightBalanceData.categories.forEach((category, index) => {
+            const isTotal = index === this.weightBalanceData.categories.length - 1;
+            const weight = document.getElementById(`weight${index}`)?.value || '0';
+            const arm = this.weightBalanceData.arms[index];
+            const momentEl = document.getElementById(`moment${index}`);
+            const moment = momentEl ? momentEl.textContent : '0';
+
+            html += `
+                <tr ${isTotal ? 'class="total-row"' : ''}>
+                    <td>${category}</td>
+                    <td>${weight}</td>
+                    <td>${arm}</td>
+                    <td>${moment}</td>
+                </tr>`;
+        });
+
+        html += `
+            </table>
+        </body>
+        </html>`;
+
+        this.lastHtmlContent = html;
+        return html;
+    }
+    // FUNZIONE MODIFICATA: Export sia Excel che PDF
+    async exportPlan() {
+        if (!this.flightData.flightResults || this.flightData.flightResults.length === 0) {
+            this.showMessage('Nessun dato di volo da esportare. Calcolare prima il piano di volo.', 'error');
+            return;
+        }
+
+        try {
+            this.showLoading(true);
+            this.showMessage('Generazione file Excel e PDF in corso...', 'info');
+
+            // Genera Excel
+            await this.exportToExcelWithTemplate();
+
+            // Genera e scarica PDF
+            await this.generateAndDownloadPDF();
+
+            this.showMessage('Export completato con successo! File Excel e PDF scaricati.', 'success');
+
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showMessage(`Errore durante l'export: ${error.message}`, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    // NUOVA FUNZIONE: Export solo PDF
+    async exportPdfOnly() {
+        if (!this.flightData.flightResults || this.flightData.flightResults.length === 0) {
+            this.showMessage('Nessun dato di volo da esportare. Calcolare prima il piano di volo.', 'error');
+            return;
+        }
+
+        try {
+            this.showLoading(true);
+            this.showMessage('Generazione file PDF in corso...', 'info');
+
+            await this.generateAndDownloadPDF();
+
+            this.showMessage('PDF generato e scaricato con successo!', 'success');
+
+        } catch (error) {
+            console.error('PDF export error:', error);
+            this.showMessage(`Errore durante la generazione PDF: ${error.message}`, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    // NUOVA FUNZIONE: Genera e scarica PDF tramite API
+    async generateAndDownloadPDF() {
+        try {
+            // Genera il contenuto HTML formattato
+            const htmlContent = this.generateFormattedHTML();
+
+            // Invia richiesta all'API per generare PDF
+            const response = await fetch('/api/generate-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    htmlContent: htmlContent
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Errore nella generazione PDF');
+            }
+
+            // Scarica il PDF
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'flight-plan.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            throw new Error(`Errore nella generazione PDF: ${error.message}`);
+        }
+    }
+
+    // FUNZIONE ESISTENTE MANTENUTA: Export Excel
+    async exportToExcelWithTemplate() {
+        try {
+            // Load template Excel file from repository root (TemplateFlightLog.xlsx)
+            const response = await fetch('TemplateFlightLog.xlsx');
+            if (!response.ok) {
+                throw new Error(`Failed to load Excel template: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+
+            const workbook = new ExcelJS.Workbook();
+            // Preserve styles by loading the template and only changing cell values
+            await workbook.xlsx.load(arrayBuffer);
+            const worksheet = workbook.getWorksheet(1);
+
+            // Fill main waypoints data - starting from A11
+            if (this.flightData.flightResults && this.flightData.flightResults.length > 0) {
+                this.flightData.flightResults.forEach((result, index) => {
+                    const row = 11 + index;
+                    // Put FIX name in column A for every row
+                    worksheet.getCell(`A${row}`).value = result.fix.split(',')[0];
+
+                    // For rows after the first, fill B-F (same logic as your python code)
+                    if (index > 0) {
+                        worksheet.getCell(`B${row}`).value = Math.ceil(parseFloat(result.route) || 0);
+                        worksheet.getCell(`C${row}`).value = Math.ceil(result.altitude || 0);
+                        worksheet.getCell(`D${row}`).value = Math.ceil(result.distance || 0);
+                        worksheet.getCell(`E${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
+                        worksheet.getCell(`F${row}`).value = Math.ceil(result.flightTime || 0);
+                    }
+                });
+
+                // Block times totals A26, C26, F26, H26 (similar to python example)
+                const totalDistance = this.flightData.flightResults.reduce((s, r) => s + (r.distance || 0), 0);
+                const totalFlightTime = this.flightData.flightResults.reduce((s, r) => s + (r.flightTime || 0), 0);
+
+                worksheet.getCell('A26').value = 'Block in';
+                worksheet.getCell('C26').value = 'Block out';
+                worksheet.getCell('F26').value = Math.round(totalDistance*10)/10;
+                worksheet.getCell('H26').value = 'Block time';
+                worksheet.getCell('I26').value = Math.round(totalFlightTime*10)/10;
+            }
+
+            // Fill fuel data (O21, O23, O24)
+            if (this.flightData.fuelData) {
+                worksheet.getCell('O21').value = this.flightData.fuelData.tripFuel || 0;
+                worksheet.getCell('O23').value = this.flightData.fuelData.contingencyFuel || 0;
+                worksheet.getCell('O24').value = this.flightData.fuelData.reserveFuel || 0;
+            }
+
+            // Fill alternate data if exists - starting from K11
+            if (this.flightData.alternateResults && this.flightData.alternateResults.length > 0) {
+                this.flightData.alternateResults.forEach((result, index) => {
+                    const row = 11 + index;
+                    worksheet.getCell(`K${row}`).value = result.fix.split(',')[0];
+
+                    if (index > 0) {
+                        worksheet.getCell(`L${row}`).value = Math.ceil(parseFloat(result.route) || 0);
+                        worksheet.getCell(`M${row}`).value = Math.ceil(result.altitude || 0);
+                        worksheet.getCell(`N${row}`).value = Math.ceil(result.distance || 0);
+                        worksheet.getCell(`O${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
+                        worksheet.getCell(`P${row}`).value = Math.ceil(result.flightTime || 0);
+                    }
+                });
+
+                // Alternate trip fuel O22 if computed
+                if (this.flightData.alternateFuelData) {
+                    worksheet.getCell('O22').value = this.flightData.alternateFuelData.alternateFuel || 0;
+                }
+            }
+
+            this.lastWorkbook = workbook;
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            this.lastExcelBlob = blob;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'FlightPlan.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            throw new Error(`Errore nella generazione del file Excel: ${error.message}`);
+        }
+    }
+
     updateFlightTable() {
         const tbody = document.getElementById('flightTableBody');
         if (!tbody) return;
-
         tbody.innerHTML = '';
-
         this.flightData.flightResults.forEach(result => {
             const row = tbody.insertRow();
             row.innerHTML = `
@@ -516,9 +925,7 @@ class VFRFlightPlanner {
     updateAlternateTable() {
         const tbody = document.getElementById('alternateTableBody');
         if (!tbody) return;
-
         tbody.innerHTML = '';
-
         this.flightData.alternateResults.forEach(result => {
             const row = tbody.insertRow();
             row.innerHTML = `
@@ -586,6 +993,9 @@ class VFRFlightPlanner {
         const exportBtn = document.getElementById('exportPlan');
         if (exportBtn) exportBtn.disabled = true;
 
+        const exportPdfBtn = document.getElementById('exportPdf');
+        if (exportPdfBtn) exportPdfBtn.disabled = true;
+
         // Reset fuel display
         ['tripFuel', 'contingencyFuel', 'reserveFuel', 'totalFuel', 'alternateFuel'].forEach(id => {
             const el = document.getElementById(id);
@@ -594,35 +1004,33 @@ class VFRFlightPlanner {
 
         // Reset form values
         const flightSpeed = document.getElementById('flightSpeed');
-        if (flightSpeed) flightSpeed.value = 90;
+        if (flightSpeed) flightSpeed.value = '90';
 
         const fuelConsumption = document.getElementById('fuelConsumption');
-        if (fuelConsumption) fuelConsumption.value = 30;
+        if (fuelConsumption) fuelConsumption.value = '30';
 
         const numWaypoints = document.getElementById('numWaypoints');
-        if (numWaypoints) numWaypoints.value = 2;
+        if (numWaypoints) numWaypoints.value = '2';
 
         const numAlternateWaypoints = document.getElementById('numAlternateWaypoints');
-        if (numAlternateWaypoints) numAlternateWaypoints.value = 2;
+        if (numAlternateWaypoints) numAlternateWaypoints.value = '2';
 
         this.addWaypointInputs();
         this.showMessage('Piano di volo resettato con successo', 'success');
     }
-
-    // Weight & Balance Methods
+    // Weight Balance Methods
     initializeWeightBalanceTable() {
         const tbody = document.getElementById('wbTableBody');
         if (!tbody) return;
-
         tbody.innerHTML = '';
 
         this.weightBalanceData.categories.forEach((category, index) => {
             const row = tbody.insertRow();
             const isTotal = index === this.weightBalanceData.categories.length - 1;
-
             row.innerHTML = `
                 <td>${category}</td>
-                <td>${isTotal ? '<span id="totalWeight">0</span>' : `<input type="number" class="form-control aviation-input" id="weight${index}" value="0" min="0" step="0.1" ${isTotal ? 'readonly' : ''}>`}</td>
+                <td>${isTotal ? '<span id="totalWeight">0</span>' : 
+                    `<input type="number" class="form-control aviation-input" id="weight${index}" value="0" min="0" step="0.1" ${isTotal ? 'readonly' : ''}>`}</td>
                 <td>${isTotal ? '<span id="totalArm">0</span>' : this.weightBalanceData.arms[index]}</td>
                 <td>${isTotal ? '<span id="totalMoment">0</span>' : `<span id="moment${index}">0</span>`}</td>
             `;
@@ -634,12 +1042,11 @@ class VFRFlightPlanner {
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
-
         this.weightBalanceData.chart = new Chart(ctx, {
             type: 'scatter',
             data: {
                 datasets: [{
-                    label: 'W&B Envelope',
+                    label: 'WB Envelope',
                     data: this.weightBalanceData.envelope,
                     borderColor: '#1FB8CD',
                     backgroundColor: 'rgba(31, 184, 205, 0.1)',
@@ -725,15 +1132,13 @@ class VFRFlightPlanner {
 
     updateWeightBalanceChart(weight, moment) {
         if (!this.weightBalanceData.chart) return;
-
-        this.weightBalanceData.chart.data.datasets[1].data = [{x: weight, y: moment}];
+        this.weightBalanceData.chart.data.datasets[1].data = [{ x: weight, y: moment }];
         this.weightBalanceData.chart.update();
     }
 
     checkWeightBalanceEnvelope(weight, moment) {
         const isInside = this.pointInPolygon([weight, moment], this.weightBalanceData.envelope);
         const statusDiv = document.getElementById('wbStatus');
-
         if (!statusDiv) return;
 
         if (isInside) {
@@ -746,28 +1151,25 @@ class VFRFlightPlanner {
     }
 
     pointInPolygon(point, polygon) {
-        const x = point[0], y = point[1];
+        const [x, y] = point;
         let inside = false;
-
         for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const xi = polygon[i][0], yi = polygon[i][1];
-            const xj = polygon[j][0], yj = polygon[j][1];
-
+            const [xi, yi] = polygon[i];
+            const [xj, yj] = polygon[j];
             if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
                 inside = !inside;
             }
         }
-
         return inside;
     }
 
     resetWeightBalance() {
         for (let i = 0; i < this.weightBalanceData.categories.length - 1; i++) {
             const weightInput = document.getElementById(`weight${i}`);
-            if (weightInput) weightInput.value = 0;
+            if (weightInput) weightInput.value = '0';
 
             const momentEl = document.getElementById(`moment${i}`);
-            if (momentEl) momentEl.textContent = 0;
+            if (momentEl) momentEl.textContent = '0';
         }
 
         const totalWeightEl = document.getElementById('totalWeight');
@@ -775,9 +1177,9 @@ class VFRFlightPlanner {
         const totalMomentEl = document.getElementById('totalMoment');
         const wbStatus = document.getElementById('wbStatus');
 
-        if (totalWeightEl) totalWeightEl.textContent = 0;
-        if (totalArmEl) totalArmEl.textContent = 0;
-        if (totalMomentEl) totalMomentEl.textContent = 0;
+        if (totalWeightEl) totalWeightEl.textContent = '0';
+        if (totalArmEl) totalArmEl.textContent = '0';
+        if (totalMomentEl) totalMomentEl.textContent = '0';
         if (wbStatus) {
             wbStatus.textContent = '';
             wbStatus.className = '';
@@ -794,16 +1196,17 @@ class VFRFlightPlanner {
     createWBRangeInputs() {
         const container = document.getElementById('wbRangeInputs');
         if (!container) return;
-
         container.innerHTML = '';
 
         this.weightBalanceData.envelope.forEach((point, index) => {
             const div = document.createElement('div');
             div.className = 'wb-range-input';
             div.innerHTML = `
-                <label>Punto ${index + 1}:</label>
-                <input type="number" class="form-control aviation-input" id="wbWeight${index}" value="${point[0]}" placeholder="Peso">
-                <input type="number" class="form-control aviation-input" id="wbMoment${index}" value="${point[1]}" placeholder="Momento">
+                <label>Punto ${index + 1}</label>
+                <input type="number" class="form-control aviation-input" id="wbWeight${index}" 
+                       value="${point[0]}" placeholder="Peso">
+                <input type="number" class="form-control aviation-input" id="wbMoment${index}" 
+                       value="${point[1]}" placeholder="Momento">
             `;
             container.appendChild(div);
         });
@@ -820,11 +1223,9 @@ class VFRFlightPlanner {
 
     saveWBRange() {
         const newEnvelope = [];
-
         for (let i = 0; i < 5; i++) {
             const weightInput = document.getElementById(`wbWeight${i}`);
             const momentInput = document.getElementById(`wbMoment${i}`);
-
             const weight = parseFloat(weightInput ? weightInput.value : 0);
             const moment = parseFloat(momentInput ? momentInput.value : 0);
 
@@ -832,12 +1233,10 @@ class VFRFlightPlanner {
                 this.showMessage('Tutti i valori devono essere numerici', 'error');
                 return;
             }
-
             newEnvelope.push([weight, moment]);
         }
 
         this.weightBalanceData.envelope = newEnvelope;
-
         if (this.weightBalanceData.chart) {
             this.weightBalanceData.chart.data.datasets[0].data = newEnvelope;
             this.weightBalanceData.chart.update();
@@ -850,113 +1249,6 @@ class VFRFlightPlanner {
         }
 
         this.showMessage('Envelope aggiornato con successo', 'success');
-    }
-
-    // Export Methods
-    async exportPlan() {
-        if (!this.flightData.flightResults || this.flightData.flightResults.length === 0) {
-            this.showMessage('Nessun dato di volo da esportare. Calcolare prima il piano di volo.', 'error');
-            return;
-        }
-
-        try {
-            this.showLoading(true);
-            this.showMessage('Generazione file Excel in corso...', 'info');
-
-            await this.exportToExcelWithTemplate();
-
-            this.showMessage('Export completato con successo! Il file Excel è stato scaricato.', 'success');
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showMessage(`Errore durante l'export: ${error.message}`, 'error');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async exportToExcelWithTemplate() {
-        try {
-            // Load template Excel file from repository root (TemplateFlightLog.xlsx)
-            const response = await fetch('TemplateFlightLog.xlsx');
-
-            if (!response.ok) {
-                throw new Error(`Failed to load Excel template: ${response.status}`);
-            }
-
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = new ExcelJS.Workbook();
-            // Preserve styles by loading the template and only changing cell values
-            await workbook.xlsx.load(arrayBuffer);
-            const worksheet = workbook.getWorksheet(1);
-
-            // Fill main waypoints data - starting from A11
-            if (this.flightData.flightResults && this.flightData.flightResults.length > 0) {
-                this.flightData.flightResults.forEach((result, index) => {
-                    const row = 11 + index;
-                    // Put FIX name in column A for every row
-                    worksheet.getCell(`A${row}`).value = (result.fix || '').split(',')[0] || '';
-                    // For rows after the first, fill B-F (same logic as your python code)
-                    if (index > 0) {
-                        worksheet.getCell(`B${row}`).value = Math.ceil(parseFloat(result.route) || 0);
-                        worksheet.getCell(`C${row}`).value = Math.ceil(result.altitude || 0);
-                        worksheet.getCell(`D${row}`).value = Math.ceil(result.distance || 0);
-                        worksheet.getCell(`E${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
-                        worksheet.getCell(`F${row}`).value = Math.ceil(result.flightTime || 0);
-                    }
-                });
-
-                // Block times / totals (A26, C26, F26, H26) similar to python example
-                const totalDistance = this.flightData.flightResults.reduce((s, r) => s + (r.distance || 0), 0);
-                const totalFlightTime = this.flightData.flightResults.reduce((s, r) => s + (r.flightTime || 0), 0);
-
-                worksheet.getCell('A26').value = 'Block in:';
-                worksheet.getCell('C26').value = `Block out: ${Math.round(totalDistance*10)/10}`;
-                worksheet.getCell('F26').value = `Block time: ${Math.round(totalFlightTime*10)/10}`;
-                worksheet.getCell('H26').value = 'Tot. T. Enr.';
-
-                // Fill fuel data (O21, O23, O24)
-                if (this.flightData.fuelData) {
-                    worksheet.getCell('O21').value = this.flightData.fuelData.tripFuel || 0;
-                    worksheet.getCell('O23').value = this.flightData.fuelData.contingencyFuel || 0;
-                    worksheet.getCell('O24').value = this.flightData.fuelData.reserveFuel || 0;
-                }
-            }
-
-            // Fill alternate data if exists - starting from K11
-            if (this.flightData.alternateResults && this.flightData.alternateResults.length > 0) {
-                this.flightData.alternateResults.forEach((result, index) => {
-                    const row = 11 + index;
-                    worksheet.getCell(`K${row}`).value = (result.fix || '').split(',')[0] || '';
-                    if (index > 0) {
-                        worksheet.getCell(`L${row}`).value = Math.ceil(parseFloat(result.route) || 0);
-                        worksheet.getCell(`M${row}`).value = Math.ceil(result.altitude || 0);
-                        worksheet.getCell(`N${row}`).value = Math.ceil(result.distance || 0);
-                        worksheet.getCell(`O${row}`).value = Math.ceil(parseFloat(result.radial) || 0);
-                        worksheet.getCell(`P${row}`).value = Math.ceil(result.flightTime || 0);
-                    }
-                });
-
-                // Alternate trip fuel (O22) if computed
-                if (this.flightData.alternateFuelData) {
-                    worksheet.getCell('O22').value = this.flightData.alternateFuelData.alternateFuel || 0;
-                }
-            }
-            this.lastWorkbook = workbook;
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            this.lastExcelBlob = blob;
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'FlightPlan.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Error exporting to Excel:', error);
-            throw new Error(`Errore nella generazione del file Excel: ${error.message}`);
-        }
     }
 
     // Utility Methods
@@ -976,7 +1268,6 @@ class VFRFlightPlanner {
     showLoading(show) {
         const loadingDiv = document.getElementById('loading');
         if (!loadingDiv) return;
-
         loadingDiv.style.display = show ? 'block' : 'none';
     }
 }

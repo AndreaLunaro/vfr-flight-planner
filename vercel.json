@@ -1,7 +1,11 @@
 {
   "functions": {
-    "api/ilovepdf-convert.js": {
+    "api/generate-pdf.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "serverExternalPackages": [
+    "@sparticuz/chromium",
+    "puppeteer-core"
+  ]
 }
