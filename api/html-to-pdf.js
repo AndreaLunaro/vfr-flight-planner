@@ -1,4 +1,4 @@
-// api/html-to-pdf.js - VERSIONE FINALE CON SEZIONE NOTE
+// api/html-to-pdf.js - VERSIONE CORRETTA SINGLE PAGE
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    console.log('Starting PDF generation (FINAL WITH NOTES), HTML length:', htmlContent.length);
+    console.log('Starting PDF generation (SINGLE PAGE OPTIMIZED), HTML length:', htmlContent.length);
 
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const page = await browser.newPage();
     page.setDefaultTimeout(30000);
 
-    // Configurazione A4 LANDSCAPE ottimizzata
+    // Configurazione A4 LANDSCAPE ottimizzata per single page
     await page.setViewport({ 
       width: 1123,  // A4 landscape width
       height: 794,  // A4 landscape height
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // Aspetta caricamento font
     await page.evaluateHandle('document.fonts.ready');
 
-    console.log('Generating FINAL PDF with notes section...');
+    console.log('Generating SINGLE PAGE PDF...');
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -54,16 +54,16 @@ export default async function handler(req, res) {
       printBackground: true,
       preferCSSPageSize: true,
       margin: {
-        top: '10mm',
-        right: '10mm', 
-        bottom: '10mm',
-        left: '10mm'
+        top: '8mm',
+        right: '8mm', 
+        bottom: '8mm',
+        left: '8mm'
       },
       displayHeaderFooter: false,
       scale: 1.0
     });
 
-    console.log(`PDF FINAL with notes generated successfully, size: ${pdf.length} bytes`);
+    console.log(`PDF SINGLE PAGE generated successfully, size: ${pdf.length} bytes`);
 
     await page.close();
     await browser.close();
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Final.pdf"');
+    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-SinglePage.pdf"');
     res.setHeader('Content-Length', String(pdf.length));
     return res.end(pdf);
 
