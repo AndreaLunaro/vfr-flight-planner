@@ -1,4 +1,4 @@
-// api/html-to-pdf.js - VERSIONE FINALE OTTIMIZZATA
+// api/html-to-pdf.js - VERSIONE FINALE CON SEZIONE NOTE
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    console.log('Starting PDF generation (OPTIMIZED LAYOUT), HTML length:', htmlContent.length);
+    console.log('Starting PDF generation (FINAL WITH NOTES), HTML length:', htmlContent.length);
 
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // Aspetta caricamento font
     await page.evaluateHandle('document.fonts.ready');
 
-    console.log('Generating optimized PDF with side-by-side layout...');
+    console.log('Generating FINAL PDF with notes section...');
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       scale: 1.0
     });
 
-    console.log(`PDF OPTIMIZED generated successfully, size: ${pdf.length} bytes`);
+    console.log(`PDF FINAL with notes generated successfully, size: ${pdf.length} bytes`);
 
     await page.close();
     await browser.close();
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Optimized.pdf"');
+    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Final.pdf"');
     res.setHeader('Content-Length', String(pdf.length));
     return res.end(pdf);
 
