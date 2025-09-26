@@ -1,4 +1,4 @@
-// api/html-to-pdf.js - VERSIONE FINALE COMPLETA
+// api/html-to-pdf.js - VERSIONE FINALE OTTIMIZZATA
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { htmlContent } = req.body || {};
     if (!htmlContent) return res.status(400).json({ error: 'HTML content is required' });
 
-    console.log('Starting PDF generation (LANDSCAPE + ETO/ATO/RETO), HTML length:', htmlContent.length);
+    console.log('Starting PDF generation (OPTIMIZED LAYOUT), HTML length:', htmlContent.length);
 
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     });
 
     const page = await browser.newPage();
-    page.setDefaultTimeout(25000);
+    page.setDefaultTimeout(30000);
 
     // Configurazione A4 LANDSCAPE ottimizzata
     await page.setViewport({ 
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     await page.setContent(htmlContent, { 
       waitUntil: 'domcontentloaded',
-      timeout: 20000 
+      timeout: 25000 
     });
 
     // Emula media print per CSS @page
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     // Aspetta caricamento font
     await page.evaluateHandle('document.fonts.ready');
 
-    console.log('Generating PDF with A4 LANDSCAPE format + ETO/ATO/RETO columns...');
+    console.log('Generating optimized PDF with side-by-side layout...');
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -54,16 +54,16 @@ export default async function handler(req, res) {
       printBackground: true,
       preferCSSPageSize: true,
       margin: {
-        top: '8mm',
-        right: '8mm', 
-        bottom: '8mm',
-        left: '8mm'
+        top: '10mm',
+        right: '10mm', 
+        bottom: '10mm',
+        left: '10mm'
       },
       displayHeaderFooter: false,
       scale: 1.0
     });
 
-    console.log(`PDF LANDSCAPE with ETO/ATO/RETO generated successfully, size: ${pdf.length} bytes`);
+    console.log(`PDF OPTIMIZED generated successfully, size: ${pdf.length} bytes`);
 
     await page.close();
     await browser.close();
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     res.status(200);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Complete.pdf"');
+    res.setHeader('Content-Disposition', 'attachment; filename="VFR-Flight-Plan-Optimized.pdf"');
     res.setHeader('Content-Length', String(pdf.length));
     return res.end(pdf);
 
