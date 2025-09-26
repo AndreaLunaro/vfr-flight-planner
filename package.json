@@ -1,16 +1,9 @@
 {
-  "name": "vfr-planner-pdf",
+  "name": "vfr-planner-ilovepdf",
   "version": "1.0.0",
-  "type": "module",
   "dependencies": {
-    "@sparticuz/chromium": "^131.0.0",
-    "puppeteer-core": "^23.10.4",
-    "exceljs": "^4.4.0"
-  },
-  "devDependencies": {
-    "puppeteer": "^23.10.4"
-  },
-  "engines": {
-    "node": ">=18"
+    "@ilovepdf/ilovepdf-nodejs": "^0.1.1",
+    "form-data": "^4.0.0",
+    "node-fetch": "^3.3.2"
   }
 }

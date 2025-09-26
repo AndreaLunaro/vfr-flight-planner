@@ -1,12 +1,7 @@
 {
   "functions": {
-    "api/generate-pdf.js": {
-      "maxDuration": 60,
-      "memory": 1024,
-      "runtime": "nodejs18.x"
+    "api/ilovepdf-convert.js": {
+      "maxDuration": 30
     }
-  },
-  "serverExternalPackages": [
-    "@sparticuz/chromium"
-  ]
+  }
 }
