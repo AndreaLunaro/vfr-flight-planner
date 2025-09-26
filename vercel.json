@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/html-to-pdf.js": {
-      "maxDuration": 60        // NO runtime (auto-detect)
+      "maxDuration": 60        
     }
   }
 }
