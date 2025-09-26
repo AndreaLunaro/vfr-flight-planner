@@ -525,7 +525,7 @@ class VFRFlightPlanner {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VFR Flight Plan - Final Optimized A4</title>
+    <title>VFR Flight Plan - ATO042 A4</title>
     <style>
         @page {
             size: A4 landscape;
@@ -580,7 +580,7 @@ class VFRFlightPlanner {
             padding: 3px 6px;               
             background: #f8fafc;
             border-bottom: 1px solid #ccc;
-            font-size: 7px;                 
+            font-size: 12px;                 
             flex-shrink: 0;
             height: 18px;                   /* Altezza ridotta */
         }
@@ -596,7 +596,7 @@ class VFRFlightPlanner {
             padding: 5px;
             background: #f9f9f9;
             border: 1px solid #666;
-            height: 42px;                   /* Altezza bilanciata per note */
+            height: 80px;                   /* Altezza bilanciata per note */
             position: relative;
             flex-shrink: 0;
         }
@@ -605,14 +605,14 @@ class VFRFlightPlanner {
             position: absolute;
             top: 2px;
             left: 5px;
-            font-size: 7px;                 
+            font-size: 12px;                 
             font-weight: bold;
             color: #333;
         }
 
         .notes-lines {
             margin-top: 14px;
-            height: 24px;                   
+            height: 12px;                   
             background-image: repeating-linear-gradient(
                 transparent,
                 transparent 7px,
@@ -645,7 +645,7 @@ class VFRFlightPlanner {
             color: white;
             text-align: center;
             font-weight: bold;
-            font-size: 9px;                 
+            font-size: 12px;                 
             padding: 2px;
             border-bottom: 2px solid #000;
             flex-shrink: 0;
@@ -657,14 +657,14 @@ class VFRFlightPlanner {
             border-collapse: collapse;
             border-spacing: 0;
             flex: 1;                        
-            font-size: 6px;                 /* Font tabella compatto */
+            font-size: 12px;                 /* Font tabella compatto */
         }
 
         .flight-table th {
             background: #3b82f6;            
             color: white;
             font-weight: bold;
-            font-size: 6px;                 
+            font-size: 12px;                 
             padding: 1px;                   
             text-align: center;
             border: 1px solid #000;
@@ -675,7 +675,7 @@ class VFRFlightPlanner {
             border: 1px solid #666;
             padding: 1px;                   
             text-align: center;
-            font-size: 7px;                 /* Font celle piano volo */
+            font-size: 12px;                 /* Font celle piano volo */
             height: 15px;                   /* CELLE RIDOTTE per piano volo */
             vertical-align: middle;
             font-weight: 500;               
@@ -685,13 +685,13 @@ class VFRFlightPlanner {
             text-align: left !important;
             font-weight: bold;
             padding-left: 2px;
-            font-size: 6px;                 
+            font-size: 12px;                 
         }
 
         /* Stile per colonne ETO/ATO/RETO compatte */
         .time-column {
             background: #f0f9ff;
-            font-size: 6px;                 
+            font-size: 12px;                 
             font-weight: 600;
         }
 
@@ -720,7 +720,7 @@ class VFRFlightPlanner {
             background: #1e40af;
             color: white;
             padding: 2px;                   
-            font-size: 9px;                 /* Font header bottom INGRANDITO */
+            font-size: 12px;                 /* Font header bottom INGRANDITO */
             text-align: center;
             border: 1px solid #000;
         }
@@ -728,7 +728,7 @@ class VFRFlightPlanner {
         .fuel-summary td, .block-times td {
             padding: 2px 3px;               
             border: 1px solid #666;
-            font-size: 8px;                 /* Font celle bottom INGRANDITO */
+            font-size: 12px;                 /* Font celle bottom INGRANDITO */
             height: auto;
         }
 
@@ -736,20 +736,20 @@ class VFRFlightPlanner {
             text-align: left;
             font-weight: bold;
             background: #f8fafc;
-            font-size: 7px;                 /* Font label bottom INGRANDITO */
+            font-size: 12px;                 /* Font label bottom INGRANDITO */
         }
 
         .fuel-value {
             text-align: center;
             font-weight: bold;
-            font-size: 8px;                 /* Font valori bottom INGRANDITO */
+            font-size: 12px;                 /* Font valori bottom INGRANDITO */
         }
 
         /* Footer compatto */
         .footer-info {
             margin-top: 1px;
             padding: 1px;                   
-            font-size: 5px;                 
+            font-size: 12px;                 
             color: #666;
             text-align: center;
             border-top: 1px solid #ccc;
@@ -812,14 +812,14 @@ class VFRFlightPlanner {
                     <thead>
                         <tr>
                             <th style="width: 18%;">FIX</th>
-                            <th style="width: 10%;">Route</th>
-                            <th style="width: 11%;">Alt[Ft]</th>
-                            <th style="width: 11%;">Dist[NM]</th>
-                            <th style="width: 10%;">Radial</th>
-                            <th style="width: 11%;">Time[min]</th>
-                            <th style="width: 9%;">ETO</th>
-                            <th style="width: 9%;">ATO</th>
-                            <th style="width: 9%;">RETO</th>
+                            <th style="width: 9%;">Route</th>
+                            <th style="width: 9%;">Alt[Ft]</th>
+                            <th style="width: 9%;">Dist[NM]</th>
+                            <th style="width: 9%;">Radial</th>
+                            <th style="width: 9%;">Time[min]</th>
+                            <th style="width: 11%;">ETO</th>
+                            <th style="width: 11%;">ATO</th>
+                            <th style="width: 11%;">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -863,14 +863,14 @@ class VFRFlightPlanner {
                     <thead>
                         <tr>
                             <th style="width: 18%;">FIX ALT</th>
-                            <th style="width: 10%;">Route</th>
-                            <th style="width: 11%;">Alt[Ft]</th>
-                            <th style="width: 11%;">Dist[NM]</th>
-                            <th style="width: 10%;">Radial</th>
-                            <th style="width: 11%;">Time[min]</th>
-                            <th style="width: 9%;">ETO</th>
-                            <th style="width: 9%;">ATO</th>
-                            <th style="width: 9%;">RETO</th>
+                            <th style="width: 9%;">Route</th>
+                            <th style="width: 9%;">Alt[Ft]</th>
+                            <th style="width: 99%;">Dist[NM]</th>
+                            <th style="width: 9%;">Radial</th>
+                            <th style="width: 9%;">Time[min]</th>
+                            <th style="width: 11%;">ETO</th>
+                            <th style="width: 11%;">ATO</th>
+                            <th style="width: 11%;">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
