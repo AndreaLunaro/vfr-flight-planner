@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "puppeteer": "^21.0.0",    // Versione stabile
+    "puppeteer": "^21.0.0",    
     "exceljs": "^4.4.0"
   },
   "engines": {
-    "node": "18.x"             // Supportato ufficialmente
+    "node": "18.x"     
   }
 }
