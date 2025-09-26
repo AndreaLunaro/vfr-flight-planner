@@ -1,12 +1,12 @@
 {
-  "name": "vfr-planner-simple",
+  "name": "vfr-planner-working",
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
-    "puppeteer": "^23.10.4",
+    "puppeteer": "^21.0.0",    // Versione stabile
     "exceljs": "^4.4.0"
   },
   "engines": {
-    "node": "22.x"
+    "node": "18.x"             // Supportato ufficialmente
   }
 }
