@@ -1,15 +1,16 @@
 {
   "name": "vfr-planner-pdf",
   "version": "1.0.0",
-  "main": "app.js",
+  "type": "module",
   "dependencies": {
-    "@sparticuz/chromium": "^129.0.0",
-    "puppeteer-core": "^23.5.0",
-    "exceljs": "^4.4.0",
-    "form-data": "^4.0.0",
-    "node-fetch": "^3.3.2"
+    "@sparticuz/chromium": "^131.0.0",
+    "puppeteer-core": "^23.10.4",
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
-    "puppeteer": "^23.5.0"
+    "puppeteer": "^23.10.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
