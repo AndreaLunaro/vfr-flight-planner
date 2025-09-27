@@ -507,6 +507,7 @@ class VFRFlightPlanner {
         }
     }
        // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
+    // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
     generateExcelReplicaHTML() {
         const currentDate = new Date().toLocaleDateString('it-IT');
         const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -526,20 +527,21 @@ class VFRFlightPlanner {
     <meta charset="UTF-8">
     <title>VFR Flight Plan - A4 Landscape Full</title>
     <style>
+        /* Imposta pagina A4 landscape */
         @page {
             size: A4 landscape;
-            margin: 6mm;
+            margin: 4mm;
+            box-sizing: border-box;
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            font-size: 9px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;  /* Aumentato da 9px a 12px (+3px) */
             line-height: 1.1;
             color: #000;
             background: #fff;
@@ -551,11 +553,11 @@ class VFRFlightPlanner {
         /* Container che sfrutta TUTTO l'A4 disponibile */
         .flight-plan-container {
             width: 100%;
-            max-width: 285mm;               /* A4 landscape - margini 6mm */
-            height: 198mm;                  /* A4 height - margini 6mm */
+            max-width: 289mm; /* A4 landscape - margini 4mm */
+            height: 202mm; /* A4 height - margini 4mm */
             margin: 0 auto;
             background: #fff;
-            border: 1px solid #000;         /* Bordo sottile per più spazio */
+            border: 1px solid #000;
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
@@ -566,10 +568,10 @@ class VFRFlightPlanner {
             text-align: center;
             background: #1e40af;
             color: white;
-            padding: 3px;                   /* Ridotto per più spazio */
-            font-size: 14px;                /* Leggibile ma compatto */
+            padding: 2px; /* Ridotto per più spazio */
+            font-size: 17px; /* Aumentato da 14px a 17px (+3px) */
             font-weight: bold;
-            border-bottom: 1px solid #000;  /* Bordo sottile */
+            border-bottom: 1px solid #000;
             flex-shrink: 0;
         }
 
@@ -577,11 +579,11 @@ class VFRFlightPlanner {
         .flight-info {
             display: flex;
             justify-content: space-between;
-            padding: 2px 6px;               /* Compatto */
+            padding: 1px 6px; /* Compatto */
             background: #f8fafc;
             border-bottom: 1px solid #ccc;
-            font-size: 8px;                 /* Font compatto */
-            height: 16px;                   /* Altezza fissa ridotta */
+            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
+            height: 14px; /* Ridotto da 16px */
             flex-shrink: 0;
         }
 
@@ -592,44 +594,44 @@ class VFRFlightPlanner {
 
         /* Sezione note ottimizzata */
         .notes-section {
-            margin: 1px 4px;               /* Margini ridotti */
-            padding: 4px;
+            margin: 1px 4px;
+            padding: 3px; /* Ridotto */
             background: #f9f9f9;
             border: 1px solid #666;
-            height: 45px;                   /* Altezza bilanciata */
+            height: 35px; /* Ridotto da 45px */
             flex-shrink: 0;
         }
 
         .notes-label {
-            font-size: 8px;                /* Font compatto */
+            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
             font-weight: bold;
             color: #333;
         }
 
         .notes-lines {
-            margin-top: 8px;
+            margin-top: 6px; /* Ridotto */
             background-image: repeating-linear-gradient(
                 transparent,
                 transparent 8px,
                 #ddd 8px,
                 #ddd 9px
             );
-            height: 30px;                   /* Spazio per scrittura */
+            height: 22px; /* Ridotto da 30px */
         }
 
         /* Layout principale che prende tutto lo spazio rimanente */
         .main-layout {
             display: flex;
-            gap: 6px;
-            padding: 1px 4px;               /* Padding ridotto */
-            flex: 1;                        /* ESPANDE per occupare tutto */
+            gap: 4px; /* Ridotto */
+            padding: 1px 4px;
+            flex: 1; /* ESPANDE per occupare tutto */
             min-height: 0;
         }
 
         /* Sezioni flight plan che si espandono */
         .main-section, .alternate-section {
             flex: 1;
-            border: 1px solid #000;         /* Bordo sottile */
+            border: 1px solid #000;
             display: flex;
             flex-direction: column;
             min-height: 0;
@@ -641,8 +643,8 @@ class VFRFlightPlanner {
             color: white;
             text-align: center;
             font-weight: bold;
-            font-size: 10px;                /* Font leggibile */
-            padding: 2px;
+            font-size: 13px; /* Aumentato da 10px a 13px (+3px) */
+            padding: 1px; /* Ridotto */
             border-bottom: 1px solid #000;
             flex-shrink: 0;
         }
@@ -651,32 +653,32 @@ class VFRFlightPlanner {
         .flight-table {
             width: 100%;
             border-collapse: collapse;
-            flex: 1;                        /* SI ESPANDE per riempire tutto */
-            font-size: 9px;                 /* Font leggibile */
-            table-layout: fixed;            /* Layout fisso per controllo */
+            flex: 1; /* SI ESPANDE per riempire tutto */
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            table-layout: fixed;
         }
 
         .flight-table th {
             background: #3b82f6;
             color: white;
             font-weight: bold;
-            font-size: 9px;
-            padding: 2px;
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            padding: 1px; /* Ridotto */
             text-align: center;
             border: 1px solid #000;
-            height: 18px;                   /* Header proporzionato */
+            height: 16px; /* Ridotto da 18px */
         }
 
-        /* CELLE PRINCIPALI CON ALTEZZA AUMENTATA */
+        /* CELLE PRINCIPALI CON ALTEZZA RIDOTTA */
         .flight-table td {
             border: 1px solid #666;
-            padding: 2px;
+            padding: 1px; /* Ridotto */
             text-align: center;
-            font-size: 9px;                 /* Font leggibile */
-            height: 22px;                   /* ALTEZZA AUMENTATA per occupare spazio */
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            height: 16px; /* RIDOTTO da 22px a 16px */
             vertical-align: middle;
             font-weight: 500;
-            white-space: nowrap;            /* Evita wrapping */
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -684,8 +686,8 @@ class VFRFlightPlanner {
         .waypoint-name {
             text-align: left !important;
             font-weight: bold;
-            padding-left: 3px;
-            font-size: 9px;
+            padding-left: 2px;
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
         }
 
         .time-column {
@@ -693,19 +695,19 @@ class VFRFlightPlanner {
             font-weight: 600;
         }
 
-        /* Sezione bottom bilanciata */
+        /* Sezione bottom compatta */
         .bottom-section {
             display: flex;
-            gap: 6px;
-            margin-top: 1px;                /* Margine minimo */
-            height: 75px;                   /* Altezza fissa adeguata */
+            gap: 4px; /* Ridotto */
+            margin-top: 1px;
+            height: 65px; /* Ridotto da 75px */
             padding: 0 4px;
             flex-shrink: 0;
         }
 
         .fuel-summary, .block-times {
             flex: 1;
-            border: 1px solid #000;         /* Bordo sottile */
+            border: 1px solid #000;
         }
 
         .fuel-summary table, .block-times table {
@@ -717,16 +719,16 @@ class VFRFlightPlanner {
         .fuel-summary th, .block-times th {
             background: #1e40af;
             color: white;
-            padding: 2px;
-            font-size: 9px;                 /* Font leggibile */
+            padding: 1px; /* Ridotto */
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
             text-align: center;
             border: 1px solid #000;
         }
 
         .fuel-summary td, .block-times td {
-            padding: 2px 3px;
+            padding: 1px 2px; /* Ridotto */
             border: 1px solid #666;
-            font-size: 9px;                 /* Font leggibile */
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
             height: auto;
         }
 
@@ -734,20 +736,20 @@ class VFRFlightPlanner {
             text-align: left;
             font-weight: bold;
             background: #f8fafc;
-            font-size: 8px;
+            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
         }
 
         .fuel-value {
             text-align: center;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
         }
 
         /* Footer minimo */
         .footer-info {
             margin-top: 1px;
             padding: 1px;
-            font-size: 6px;                 /* Font minimo */
+            font-size: 9px; /* Aumentato da 6px a 9px (+3px) */
             color: #666;
             text-align: center;
             border-top: 1px solid #ccc;
@@ -760,37 +762,31 @@ class VFRFlightPlanner {
                 margin: 0; 
                 overflow: visible; 
             }
-            .flight-plan-container { 
+            .flight-plan-container {
                 page-break-inside: avoid;
                 max-width: 100%;
                 height: 100vh;
-            }
-            @page { 
-                size: A4 landscape;
-                margin: 6mm;
             }
         }
     </style>
 </head>
 <body>
     <div class="flight-plan-container">
-
         <!-- Header -->
         <div class="main-header">
-            VFR FLIGHT PLAN - PIANO DI VOLO VFR (FULL A4)
+            VFR FLIGHT PLAN - PIANO DI VOLO VFR FULL A4
         </div>
 
         <!-- Info Generali -->
         <div class="flight-info">
             <div class="info-left">
-                <strong>Data:</strong> ${currentDate} | <strong>Ora:</strong> ${currentTime}
+                <strong>Data:</strong> ${currentDate} <strong>Ora:</strong> ${currentTime}
             </div>
             <div class="info-center">
-                <strong>Velocità:</strong> ${flightSpeed} kt | <strong>Consumo:</strong> ${fuelConsumption} l/h
+                <strong>Velocità:</strong> ${flightSpeed} kt <strong>Consumo:</strong> ${fuelConsumption} l/h
             </div>
             <div class="info-right">
-                <strong>Distanza Tot:</strong> ${Math.round(totalDistance * 10) / 10} NM | 
-                <strong>Tempo Tot:</strong> ${Math.round(totalFlightTime)} min
+                <strong>Distanza Tot:</strong> ${Math.round(totalDistance * 10) / 10} NM <strong>Tempo Tot:</strong> ${Math.round(totalFlightTime)} min
             </div>
         </div>
 
@@ -802,31 +798,30 @@ class VFRFlightPlanner {
 
         <!-- Layout Principale che occupa tutto lo spazio rimanente -->
         <div class="main-layout">
-
             <!-- Main Flight Plan -->
             <div class="main-section">
                 <div class="section-title">MAIN FLIGHT PLAN</div>
                 <table class="flight-table">
                     <thead>
                         <tr>
-                            <th style="width: 18%;">FIX</th>
-                            <th style="width: 9%;">Route</th>
-                            <th style="width: 9%;">Alt[Ft]</th>
-                            <th style="width: 9%;">Dist[NM]</th>
-                            <th style="width: 9%;">Radial</th>
-                            <th style="width: 9%;">Time[min]</th>
-                            <th style="width: 11%;">ETO</th>
-                            <th style="width: 11%;">ATO</th>
-                            <th style="width: 11%;">RETO</th>
+                            <th style="width: 18%">FIX</th>
+                            <th style="width: 9%">Route</th>
+                            <th style="width: 9%">Alt[Ft]</th>
+                            <th style="width: 9%">Dist[NM]</th>
+                            <th style="width: 9%">Radial</th>
+                            <th style="width: 9%">Time[min]</th>
+                            <th style="width: 11%">ETO</th>
+                            <th style="width: 11%">ATO</th>
+                            <th style="width: 11%">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-        // Genera 12 righe per occupare più spazio
-        const maxMainRows = 12;
+        // Genera più righe per occupare più spazio (ridotto a 10 per compensare l'altezza ridotta)
+        const maxMainRows = 10;
         for (let i = 0; i < maxMainRows; i++) {
             html += `<tr>`;
-            if (this.flightData.flightResults && i < this.flightData.flightResults.length) {
+            if (this.flightData.flightResults[i] && i < this.flightData.flightResults.length) {
                 const result = this.flightData.flightResults[i];
                 html += `
                     <td class="waypoint-name">${result.fix.split(',')[0]}</td>
@@ -837,11 +832,11 @@ class VFRFlightPlanner {
                     <td>${i > 0 ? Math.round(result.flightTime || 0) : '---'}</td>
                     <td class="time-column">____</td>
                     <td class="time-column">____</td>
-                    <td class="time-column">____</td>
-                `;
+                    <td class="time-column">____</td>`;
             } else {
-                html += `<td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
+                html += `
+                    <td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td>
+                    <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
             }
             html += `</tr>`;
         }
@@ -857,24 +852,24 @@ class VFRFlightPlanner {
                 <table class="flight-table">
                     <thead>
                         <tr>
-                            <th style="width: 18%;">FIX ALT</th>
-                            <th style="width: 9%;">Route</th>
-                            <th style="width: 9%;">Alt[Ft]</th>
-                            <th style="width: 9%;">Dist[NM]</th>
-                            <th style="width: 9%;">Radial</th>
-                            <th style="width: 9%;">Time[min]</th>
-                            <th style="width: 11%;">ETO</th>
-                            <th style="width: 11%;">ATO</th>
-                            <th style="width: 11%;">RETO</th>
+                            <th style="width: 18%">FIX ALT</th>
+                            <th style="width: 9%">Route</th>
+                            <th style="width: 9%">Alt[Ft]</th>
+                            <th style="width: 9%">Dist[NM]</th>
+                            <th style="width: 9%">Radial</th>
+                            <th style="width: 9%">Time[min]</th>
+                            <th style="width: 11%">ETO</th>
+                            <th style="width: 11%">ATO</th>
+                            <th style="width: 11%">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-        // Genera 12 righe per alternate
-        const maxAltRows = 12;
+        // Genera righe alternate (ridotto a 10)
+        const maxAltRows = 10;
         for (let i = 0; i < maxAltRows; i++) {
             html += `<tr>`;
-            if (this.flightData.alternateResults && i < this.flightData.alternateResults.length) {
+            if (this.flightData.alternateResults[i] && i < this.flightData.alternateResults.length) {
                 const altResult = this.flightData.alternateResults[i];
                 html += `
                     <td class="waypoint-name">${altResult.fix.split(',')[0]}</td>
@@ -885,11 +880,11 @@ class VFRFlightPlanner {
                     <td>${i > 0 ? Math.round(altResult.flightTime || 0) : '---'}</td>
                     <td class="time-column">____</td>
                     <td class="time-column">____</td>
-                    <td class="time-column">____</td>
-                `;
+                    <td class="time-column">____</td>`;
             } else {
-                html += `<td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
+                html += `
+                    <td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td>
+                    <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
             }
             html += `</tr>`;
         }
@@ -932,9 +927,8 @@ class VFRFlightPlanner {
 
         <!-- Footer -->
         <div class="footer-info">
-            VFR Flight Planner (Full A4) - ${currentDate} ${currentTime}
+            VFR Flight Planner Full A4 - ${currentDate} ${currentTime}
         </div>
-
     </div>
 </body>
 </html>`;
