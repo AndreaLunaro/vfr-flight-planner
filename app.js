@@ -155,9 +155,9 @@ class VFRFlightPlanner {
         const container = document.getElementById('waypointInputs');
         if (!container) return;
 
-        if (numWaypoints < 2 || numWaypoints > 20) {
-            this.showMessage('Il numero di waypoint deve essere tra 2 e 20', 'error');
-            numWaypointsInput.value = Math.max(2, Math.min(20, numWaypoints));
+        if (numWaypoints < 2 || numWaypoints > 15) {
+            this.showMessage('Il numero di waypoint deve essere tra 2 e 15', 'error');
+            numWaypointsInput.value = Math.max(2, Math.min(15, numWaypoints));
             return;
         }
 
@@ -511,6 +511,7 @@ class VFRFlightPlanner {
     
    
    
+    
     generateExcelReplicaHTML() {
         const currentDate = new Date().toLocaleDateString('it-IT');
         const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -528,7 +529,7 @@ class VFRFlightPlanner {
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VFR Flight Plan - A4 Single Page Optimized</title>
+    <title>VFR Flight Plan - A4 Single Page 15 Waypoints</title>
     <style>
         /* Pagina A4 landscape ottimizzata */
         @page {
@@ -544,7 +545,7 @@ class VFRFlightPlanner {
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;  /* FONT NORMALE per leggibilità */
+            font-size: 12px;
             line-height: 1.1;
             color: #000;
             background: #fff;
@@ -572,7 +573,7 @@ class VFRFlightPlanner {
             background: #1e40af;
             color: white;
             padding: 3px;
-            font-size: 16px;  /* FONT LEGGIBILE */
+            font-size: 16px;
             font-weight: bold;
             border-bottom: 1px solid #000;
             flex-shrink: 0;
@@ -585,7 +586,7 @@ class VFRFlightPlanner {
             padding: 2px 6px;
             background: #f8fafc;
             border-bottom: 1px solid #ccc;
-            font-size: 11px;  /* FONT LEGGIBILE */
+            font-size: 11px;
             height: 16px;
             flex-shrink: 0;
             align-items: center;
@@ -647,7 +648,7 @@ class VFRFlightPlanner {
             color: white;
             text-align: center;
             font-weight: bold;
-            font-size: 12px;  /* FONT LEGGIBILE */
+            font-size: 12px;
             padding: 2px;
             border-bottom: 1px solid #000;
             flex-shrink: 0;
@@ -657,7 +658,7 @@ class VFRFlightPlanner {
         .flight-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;  /* FONT LEGGIBILE */
+            font-size: 9px;  /* Ridotto per 15 righe */
             table-layout: fixed;
             flex: 1; /* SI ESPANDE per prendere tutto lo spazio */
         }
@@ -666,20 +667,20 @@ class VFRFlightPlanner {
             background: #3b82f6;
             color: white;
             font-weight: bold;
-            font-size: 10px;  /* FONT LEGGIBILE */
-            padding: 2px;
+            font-size: 9px;  /* Ridotto per header compatti */
+            padding: 1px;
             text-align: center;
             border: 1px solid #000;
-            height: 18px;
+            height: 14px;  /* Ridotto per più righe */
         }
 
-        /* Celle con altezza normale per leggibilità */
+        /* Celle con altezza ridotta per 15 righe */
         .flight-table td {
             border: 1px solid #666;
-            padding: 2px;
+            padding: 1px;
             text-align: center;
-            font-size: 10px;  /* FONT LEGGIBILE */
-            height: 18px;  /* ALTEZZA NORMALE per leggibilità */
+            font-size: 9px;  /* Ridotto per più contenuto */
+            height: 12px;  /* RIDOTTO per 15 righe */
             vertical-align: middle;
             font-weight: 500;
             white-space: nowrap;
@@ -690,8 +691,8 @@ class VFRFlightPlanner {
         .waypoint-name {
             text-align: left !important;
             font-weight: bold;
-            padding-left: 4px;
-            font-size: 11px;
+            padding-left: 2px;
+            font-size: 9px;
         }
 
         .time-column {
@@ -786,7 +787,7 @@ class VFRFlightPlanner {
     <div class="flight-plan-container">
         <!-- Header -->
         <div class="main-header">
-            VFR FLIGHT PLAN - PIANO DI VOLO VFR
+            VFR FLIGHT PLAN - PIANO DI VOLO VFR (15 Waypoints)
         </div>
 
         <!-- Info Generali -->
@@ -829,8 +830,8 @@ class VFRFlightPlanner {
                     </thead>
                     <tbody>`;
 
-        // Numero dinamico di righe per utilizzare tutto lo spazio
-        const maxMainRows = 6; // Ridotto per garantire che tutto stia in una pagina
+        // 15 righe per supportare il massimo numero di waypoints
+        const maxMainRows = 15;
         for (let i = 0; i < maxMainRows; i++) {
             html += `<tr>`;
             if (this.flightData.flightResults[i] && i < this.flightData.flightResults.length) {
@@ -877,8 +878,8 @@ class VFRFlightPlanner {
                     </thead>
                     <tbody>`;
 
-        // Stesso numero di righe per l'alternato
-        const maxAltRows = 6;
+        // 15 righe anche per l'alternato (per simmetria e flessibilità)
+        const maxAltRows = 15;
         for (let i = 0; i < maxAltRows; i++) {
             html += `<tr>`;
             if (this.flightData.alternateResults[i] && i < this.flightData.alternateResults.length) {
@@ -976,7 +977,6 @@ class VFRFlightPlanner {
 
         return html;
     }
-
 
 
     // FUNZIONE: Converte HTML in PDF tramite API finale ottimizzata
