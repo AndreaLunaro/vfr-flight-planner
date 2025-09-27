@@ -508,6 +508,7 @@ class VFRFlightPlanner {
     }
        // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
     // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
+    
     generateExcelReplicaHTML() {
         const currentDate = new Date().toLocaleDateString('it-IT');
         const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -525,12 +526,12 @@ class VFRFlightPlanner {
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VFR Flight Plan - A4 Landscape Full</title>
+    <title>VFR Flight Plan - A4 Landscape Optimized</title>
     <style>
-        /* Imposta pagina A4 landscape */
+        /* Imposta pagina A4 landscape con margini minimi */
         @page {
             size: A4 landscape;
-            margin: 4mm;
+            margin: 3mm;
             box-sizing: border-box;
         }
 
@@ -541,8 +542,8 @@ class VFRFlightPlanner {
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;  /* Aumentato da 9px a 12px (+3px) */
-            line-height: 1.1;
+            font-size: 10px;  /* Ridotto leggermente per più contenuto */
+            line-height: 1.0;
             color: #000;
             background: #fff;
             width: 100%;
@@ -550,11 +551,11 @@ class VFRFlightPlanner {
             overflow: hidden;
         }
 
-        /* Container che sfrutta TUTTO l'A4 disponibile */
+        /* Container ottimizzato per A4 landscape */
         .flight-plan-container {
             width: 100%;
-            max-width: 289mm; /* A4 landscape - margini 4mm */
-            height: 202mm; /* A4 height - margini 4mm */
+            max-width: 291mm; /* A4 landscape - margini 3mm */
+            height: 204mm; /* A4 height - margini 3mm */
             margin: 0 auto;
             background: #fff;
             border: 1px solid #000;
@@ -563,28 +564,30 @@ class VFRFlightPlanner {
             box-sizing: border-box;
         }
 
-        /* Header compatto */
+        /* Header ultra-compatto */
         .main-header {
             text-align: center;
             background: #1e40af;
             color: white;
-            padding: 2px; /* Ridotto per più spazio */
-            font-size: 17px; /* Aumentato da 14px a 17px (+3px) */
+            padding: 1px;
+            font-size: 14px;
             font-weight: bold;
             border-bottom: 1px solid #000;
             flex-shrink: 0;
+            height: 16px;
         }
 
-        /* Info generali compatte */
+        /* Info generali ultra-compatte */
         .flight-info {
             display: flex;
             justify-content: space-between;
-            padding: 1px 6px; /* Compatto */
+            padding: 1px 4px;
             background: #f8fafc;
             border-bottom: 1px solid #ccc;
-            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
-            height: 14px; /* Ridotto da 16px */
+            font-size: 9px;
+            height: 12px;
             flex-shrink: 0;
+            align-items: center;
         }
 
         .info-left, .info-center, .info-right {
@@ -592,43 +595,43 @@ class VFRFlightPlanner {
             font-weight: 600;
         }
 
-        /* Sezione note ottimizzata */
+        /* Sezione note ridotta drasticamente */
         .notes-section {
             margin: 1px 4px;
-            padding: 3px; /* Ridotto */
+            padding: 2px;
             background: #f9f9f9;
             border: 1px solid #666;
-            height: 35px; /* Ridotto da 45px */
+            height: 24px; /* DRASTICAMENTE ridotto da 80px */
             flex-shrink: 0;
         }
 
         .notes-label {
-            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
+            font-size: 9px;
             font-weight: bold;
             color: #333;
         }
 
         .notes-lines {
-            margin-top: 6px; /* Ridotto */
+            margin-top: 2px;
             background-image: repeating-linear-gradient(
                 transparent,
-                transparent 8px,
-                #ddd 8px,
-                #ddd 9px
+                transparent 6px,
+                #ddd 6px,
+                #ddd 7px
             );
-            height: 22px; /* Ridotto da 30px */
+            height: 14px;
         }
 
-        /* Layout principale che prende tutto lo spazio rimanente */
+        /* Layout principale ottimizzato */
         .main-layout {
             display: flex;
-            gap: 4px; /* Ridotto */
+            gap: 2px;
             padding: 1px 4px;
-            flex: 1; /* ESPANDE per occupare tutto */
+            flex: 1;
             min-height: 0;
         }
 
-        /* Sezioni flight plan che si espandono */
+        /* Sezioni flight plan compatte */
         .main-section, .alternate-section {
             flex: 1;
             border: 1px solid #000;
@@ -637,45 +640,46 @@ class VFRFlightPlanner {
             min-height: 0;
         }
 
-        /* Header sezioni compatti */
+        /* Header sezioni ultra-compatti */
         .section-title {
             background: #1e40af;
             color: white;
             text-align: center;
             font-weight: bold;
-            font-size: 13px; /* Aumentato da 10px a 13px (+3px) */
-            padding: 1px; /* Ridotto */
+            font-size: 10px;
+            padding: 1px;
             border-bottom: 1px solid #000;
             flex-shrink: 0;
+            height: 14px;
         }
 
-        /* Tabelle che si espandono per riempire tutto lo spazio */
+        /* Tabelle con altezza fissa per controllo totale */
         .flight-table {
             width: 100%;
             border-collapse: collapse;
-            flex: 1; /* SI ESPANDE per riempire tutto */
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            font-size: 10px;
             table-layout: fixed;
+            height: 100%; /* Usa tutto lo spazio disponibile */
         }
 
         .flight-table th {
             background: #3b82f6;
             color: white;
             font-weight: bold;
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
-            padding: 1px; /* Ridotto */
+            font-size: 9px;
+            padding: 0px;
             text-align: center;
             border: 1px solid #000;
-            height: 16px; /* Ridotto da 18px */
+            height: 12px; /* Ridotto drasticamente */
         }
 
-        /* CELLE PRINCIPALI CON ALTEZZA RIDOTTA */
+        /* CELLE con altezza minima assoluta */
         .flight-table td {
             border: 1px solid #666;
-            padding: 1px; /* Ridotto */
+            padding: 0px 1px; /* Padding minimo */
             text-align: center;
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
-            height: 16px; /* RIDOTTO da 22px a 16px */
+            font-size: 9px;
+            height: 12px; /* ALTEZZA MINIMA per massimizzare righe */
             vertical-align: middle;
             font-weight: 500;
             white-space: nowrap;
@@ -686,8 +690,8 @@ class VFRFlightPlanner {
         .waypoint-name {
             text-align: left !important;
             font-weight: bold;
-            padding-left: 2px;
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            padding-left: 1px;
+            font-size: 9px;
         }
 
         .time-column {
@@ -695,12 +699,12 @@ class VFRFlightPlanner {
             font-weight: 600;
         }
 
-        /* Sezione bottom compatta */
+        /* Sezione bottom con altezza fissa e ridotta */
         .bottom-section {
             display: flex;
-            gap: 4px; /* Ridotto */
+            gap: 2px;
             margin-top: 1px;
-            height: 65px; /* Ridotto da 75px */
+            height: 52px; /* RIDOTTO da 65px per garantire spazio */
             padding: 0 4px;
             flex-shrink: 0;
         }
@@ -719,44 +723,46 @@ class VFRFlightPlanner {
         .fuel-summary th, .block-times th {
             background: #1e40af;
             color: white;
-            padding: 1px; /* Ridotto */
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            padding: 1px;
+            font-size: 10px;
             text-align: center;
             border: 1px solid #000;
+            height: 12px;
         }
 
         .fuel-summary td, .block-times td {
-            padding: 1px 2px; /* Ridotto */
+            padding: 0px 2px;
             border: 1px solid #666;
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
-            height: auto;
+            font-size: 9px;
+            height: 8px; /* Ridotto drasticamente */
         }
 
         .fuel-label {
             text-align: left;
             font-weight: bold;
             background: #f8fafc;
-            font-size: 11px; /* Aumentato da 8px a 11px (+3px) */
+            font-size: 8px;
         }
 
         .fuel-value {
             text-align: center;
             font-weight: bold;
-            font-size: 12px; /* Aumentato da 9px a 12px (+3px) */
+            font-size: 9px;
         }
 
-        /* Footer minimo */
+        /* Footer minimo assoluto */
         .footer-info {
-            margin-top: 1px;
+            margin-top: 0px;
             padding: 1px;
-            font-size: 9px; /* Aumentato da 6px a 9px (+3px) */
+            font-size: 7px;
             color: #666;
             text-align: center;
             border-top: 1px solid #ccc;
             flex-shrink: 0;
+            height: 10px;
         }
 
-        /* Regole print per A4 */
+        /* Regole print ottimizzate */
         @media print {
             body { 
                 margin: 0; 
@@ -774,7 +780,7 @@ class VFRFlightPlanner {
     <div class="flight-plan-container">
         <!-- Header -->
         <div class="main-header">
-            VFR FLIGHT PLAN - PIANO DI VOLO VFR FULL A4
+            VFR FLIGHT PLAN - PIANO DI VOLO VFR OPTIMIZED A4
         </div>
 
         <!-- Info Generali -->
@@ -790,13 +796,13 @@ class VFRFlightPlanner {
             </div>
         </div>
 
-        <!-- Sezione Note -->
+        <!-- Sezione Note ridotta al minimo -->
         <div class="notes-section">
-            <div class="notes-label">NOTES / NOTE:</div>
+            <div class="notes-label">NOTES:</div>
             <div class="notes-lines"></div>
         </div>
 
-        <!-- Layout Principale che occupa tutto lo spazio rimanente -->
+        <!-- Layout Principale ottimizzato -->
         <div class="main-layout">
             <!-- Main Flight Plan -->
             <div class="main-section">
@@ -804,21 +810,21 @@ class VFRFlightPlanner {
                 <table class="flight-table">
                     <thead>
                         <tr>
-                            <th style="width: 18%">FIX</th>
-                            <th style="width: 9%">Route</th>
-                            <th style="width: 9%">Alt[Ft]</th>
-                            <th style="width: 9%">Dist[NM]</th>
-                            <th style="width: 9%">Radial</th>
-                            <th style="width: 9%">Time[min]</th>
-                            <th style="width: 11%">ETO</th>
-                            <th style="width: 11%">ATO</th>
-                            <th style="width: 11%">RETO</th>
+                            <th style="width: 16%">FIX</th>
+                            <th style="width: 7%">Route</th>
+                            <th style="width: 8%">Alt[Ft]</th>
+                            <th style="width: 10%">Dist[NM]</th>
+                            <th style="width: 8%">Radial</th>
+                            <th style="width: 10%">Time[min]</th>
+                            <th style="width: 14%">ETO</th>
+                            <th style="width: 13%">ATO</th>
+                            <th style="width: 14%">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-        // Genera più righe per occupare più spazio (ridotto a 10 per compensare l'altezza ridotta)
-        const maxMainRows = 10;
+        // Ridotto a 8 righe per garantire che tutto stia nella pagina
+        const maxMainRows = 8;
         for (let i = 0; i < maxMainRows; i++) {
             html += `<tr>`;
             if (this.flightData.flightResults[i] && i < this.flightData.flightResults.length) {
@@ -852,21 +858,21 @@ class VFRFlightPlanner {
                 <table class="flight-table">
                     <thead>
                         <tr>
-                            <th style="width: 18%">FIX ALT</th>
-                            <th style="width: 9%">Route</th>
-                            <th style="width: 9%">Alt[Ft]</th>
-                            <th style="width: 9%">Dist[NM]</th>
-                            <th style="width: 9%">Radial</th>
-                            <th style="width: 9%">Time[min]</th>
-                            <th style="width: 11%">ETO</th>
-                            <th style="width: 11%">ATO</th>
-                            <th style="width: 11%">RETO</th>
+                            <th style="width: 16%">FIX ALT</th>
+                            <th style="width: 7%">Route</th>
+                            <th style="width: 8%">Alt[Ft]</th>
+                            <th style="width: 10%">Dist[NM]</th>
+                            <th style="width: 8%">Radial</th>
+                            <th style="width: 10%">Time[min]</th>
+                            <th style="width: 14%">ETO</th>
+                            <th style="width: 13%">ATO</th>
+                            <th style="width: 14%">RETO</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-        // Genera righe alternate (ridotto a 10)
-        const maxAltRows = 10;
+        // Ridotto anche le righe alternate a 8
+        const maxAltRows = 8;
         for (let i = 0; i < maxAltRows; i++) {
             html += `<tr>`;
             if (this.flightData.alternateResults[i] && i < this.flightData.alternateResults.length) {
@@ -895,7 +901,7 @@ class VFRFlightPlanner {
             </div>
         </div>
 
-        <!-- Sezione Bottom -->
+        <!-- Sezione Bottom ridotta -->
         <div class="bottom-section">
             <div class="fuel-summary">
                 <table>
@@ -927,7 +933,7 @@ class VFRFlightPlanner {
 
         <!-- Footer -->
         <div class="footer-info">
-            VFR Flight Planner Full A4 - ${currentDate} ${currentTime}
+            VFR Flight Planner A4 Optimized - ${currentDate} ${currentTime}
         </div>
     </div>
 </body>
@@ -935,6 +941,7 @@ class VFRFlightPlanner {
 
         return html;
     }
+
 
     // FUNZIONE: Converte HTML in PDF tramite API finale ottimizzata
     async generatePDFFromHTML() {
