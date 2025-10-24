@@ -31,12 +31,7 @@ class VFRFlightPlanner {
         this.lastExcelBlob = null;
         this.lastGeneratedHTML = null;
 
-        
-        // Autocomplete variables
-        this.autocompleteTimeout = null;
-        this.currentAutocompleteInput = null;
-
-this.init();
+        this.init();
     }
 
     init() {
@@ -168,24 +163,27 @@ this.init();
 
         container.innerHTML = '';
         for (let i = 0; i < numWaypoints; i++) {
-                            const div = document.createElement('div');
-                div.className = 'waypoint-input';
-                div.style.position = 'relative';
-                div.innerHTML = `
-                    <label for="waypoint${i}" class="form-label aviation-label">Waypoint ${i + 1}</label>
-                    <input type="text" 
-                           class="form-control aviation-input waypoint-autocomplete" 
-                           id="waypoint${i}" 
-                           placeholder="Nome località o aeroporto"
-                           autocomplete="off"
-                           data-waypoint-index="${i}">
-                    <div class="autocomplete-suggestions" id="suggestions-waypoint${i}" style="display: none;"></div>
-                `;
-                container.appendChild(div);
+            const div = document.createElement('div');
+            div.className = 'waypoint-input';
+            div.style.position = 'relative';
+            div.innerHTML = `
+                <label for="waypoint${i}" class="form-label aviation-label">Waypoint ${i + 1}</label>
+                <input type="text" class="form-control aviation-input waypoint-autocomplete" 
+                       id="waypoint${i}" 
+                       data-waypoint-index="${i}"
+                       placeholder="Nome città (es. Roma, Milano)" 
+                       autocomplete="off">
+                <div id="waypoint${i}-suggestions" class="autocomplete-suggestions"></div>
+            `;
+            container.appendChild(div);
 
-                // Add autocomplete event listener
-                const input = div.querySelector(`#waypoint${i}`);
-                this.setupAutocomplete(input, `suggestions-waypoint${i}`);
+            // Aggiungi event listener per autocomplete
+            setTimeout(() => {
+                const input = document.getElementById(`waypoint${i}`);
+                if (input) {
+                    this.setupAutocomplete(input, `waypoint${i}-suggestions`);
+                }
+            }, 100);
         }
         this.showMessage(`${numWaypoints} campi waypoint generati con successo`, 'success');
     }
@@ -206,24 +204,27 @@ this.init();
 
         container.innerHTML = '';
         for (let i = 0; i < numWaypoints; i++) {
-                            const div = document.createElement('div');
-                div.className = 'waypoint-input';
-                div.style.position = 'relative';
-                div.innerHTML = `
-                    <label for="alternateWaypoint${i}" class="form-label aviation-label">Alternate Waypoint ${i + 1}</label>
-                    <input type="text" 
-                           class="form-control aviation-input waypoint-autocomplete" 
-                           id="alternateWaypoint${i}" 
-                           placeholder="Nome località o aeroporto"
-                           autocomplete="off"
-                           data-waypoint-index="${i}">
-                    <div class="autocomplete-suggestions" id="suggestions-alternateWaypoint${i}" style="display: none;"></div>
-                `;
-                container.appendChild(div);
+            const div = document.createElement('div');
+            div.className = 'waypoint-input';
+            div.style.position = 'relative';
+            div.innerHTML = `
+                <label for="alternateWaypoint${i}" class="form-label aviation-label">Alternate Waypoint ${i + 1}</label>
+                <input type="text" class="form-control aviation-input waypoint-autocomplete" 
+                       id="alternateWaypoint${i}" 
+                       data-waypoint-index="${i}"
+                       placeholder="Nome città (es. Napoli, Venezia)" 
+                       autocomplete="off">
+                <div id="alternateWaypoint${i}-suggestions" class="autocomplete-suggestions"></div>
+            `;
+            container.appendChild(div);
 
-                // Add autocomplete event listener
-                const input = div.querySelector(`#alternateWaypoint${i}`);
-                this.setupAutocomplete(input, `suggestions-alternateWaypoint${i}`);
+            // Aggiungi event listener per autocomplete
+            setTimeout(() => {
+                const input = document.getElementById(`alternateWaypoint${i}`);
+                if (input) {
+                    this.setupAutocomplete(input, `alternateWaypoint${i}-suggestions`);
+                }
+            }, 100);
         }
         this.showMessage(`${numWaypoints} campi waypoint alternati generati con successo`, 'success');
     }
@@ -250,198 +251,127 @@ this.init();
         }
     }
 
-    
-    // ===== AUTOCOMPLETE METHODS =====
-    setupAutocomplete(input, suggestionsId) {
-        if (!input) return;
 
-        input.addEventListener('input', (e) => {
+    // ===== AUTOCOMPLETE FUNCTIONS =====
+
+    setupAutocomplete(inputElement, suggestionsId) {
+        if (!inputElement) return;
+
+        inputElement.addEventListener('input', (e) => {
             const query = e.target.value.trim();
 
-            // Clear previous timeout
+            // Cancella il timeout precedente
             if (this.autocompleteTimeout) {
                 clearTimeout(this.autocompleteTimeout);
             }
 
-            // Hide suggestions if query is too short
-            if (query.length < 3) {
+            // Se la query è troppo corta, nascondi i suggerimenti
+            if (query.length < 2) {
                 this.hideAutocompleteSuggestions(suggestionsId);
                 return;
             }
 
-            // Debounce the API call
+            // Imposta un nuovo timeout per evitare troppe richieste
             this.autocompleteTimeout = setTimeout(() => {
-                this.fetchAutocompleteSuggestions(query, suggestionsId, input);
+                this.searchLocations(query, suggestionsId, inputElement);
             }, 300);
         });
 
-        // Hide suggestions when clicking outside
+        // Nascondi i suggerimenti quando si clicca fuori
         document.addEventListener('click', (e) => {
-            if (!input.contains(e.target)) {
-                this.hideAutocompleteSuggestions(suggestionsId);
-            }
-        });
-
-        // Handle keyboard navigation
-        input.addEventListener('keydown', (e) => {
-            const suggestionsDiv = document.getElementById(suggestionsId);
-            if (!suggestionsDiv || suggestionsDiv.style.display === 'none') return;
-
-            const items = suggestionsDiv.querySelectorAll('.autocomplete-item');
-            const currentActive = suggestionsDiv.querySelector('.autocomplete-item.active');
-            let currentIndex = Array.from(items).indexOf(currentActive);
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-                this.setActiveAutocompleteItem(items, currentIndex);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-                this.setActiveAutocompleteItem(items, currentIndex);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (currentActive) {
-                    currentActive.click();
-                }
-            } else if (e.key === 'Escape') {
+            if (!inputElement.contains(e.target)) {
                 this.hideAutocompleteSuggestions(suggestionsId);
             }
         });
     }
 
-    async fetchAutocompleteSuggestions(query, suggestionsId, input) {
+    async searchLocations(query, suggestionsId, inputElement) {
         try {
-            // Try Italy first
-            const italyQuery = `${query}, Italia`;
-            const italyUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(italyQuery)}&limit=5&addressdetails=1`;
+            // Priorità ai luoghi italiani
+            const italianQuery = `${query}, Italy`;
+            const globalQuery = query;
 
-            const italyResponse = await fetch(italyUrl, {
+            // Prima cerca in Italia
+            const italianUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(italianQuery)}&limit=5&addressdetails=1&countrycodes=it`;
+
+            const response = await fetch(italianUrl, {
                 headers: {
                     'User-Agent': 'VFR Flight Planner App'
                 }
             });
 
-            if (!italyResponse.ok) throw new Error('Nominatim request failed');
+            if (!response.ok) {
+                console.error('Autocomplete search failed');
+                return;
+            }
 
-            let results = await italyResponse.json();
+            let results = await response.json();
 
-            // If less than 3 results from Italy, search worldwide
-            if (results.length < 3) {
-                const worldUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
-                const worldResponse = await fetch(worldUrl, {
+            // Se non ci sono risultati in Italia, cerca nel mondo
+            if (results.length === 0) {
+                const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(globalQuery)}&limit=5&addressdetails=1`;
+                const globalResponse = await fetch(globalUrl, {
                     headers: {
                         'User-Agent': 'VFR Flight Planner App'
                     }
                 });
 
-                if (worldResponse.ok) {
-                    const worldResults = await worldResponse.json();
-                    // Merge results, avoiding duplicates
-                    const existingIds = new Set(results.map(r => r.place_id));
-                    worldResults.forEach(r => {
-                        if (!existingIds.has(r.place_id) && results.length < 5) {
-                            results.push(r);
-                        }
-                    });
+                if (globalResponse.ok) {
+                    results = await globalResponse.json();
                 }
             }
 
-            this.displayAutocompleteSuggestions(results, suggestionsId, input);
+            this.displayAutocompleteSuggestions(results, suggestionsId, inputElement);
+
         } catch (error) {
             console.error('Autocomplete error:', error);
-            this.hideAutocompleteSuggestions(suggestionsId);
         }
     }
 
-    displayAutocompleteSuggestions(results, suggestionsId, input) {
-        const suggestionsDiv = document.getElementById(suggestionsId);
-        if (!suggestionsDiv) return;
+    displayAutocompleteSuggestions(results, suggestionsId, inputElement) {
+        const suggestionsContainer = document.getElementById(suggestionsId);
+        if (!suggestionsContainer) return;
 
         if (results.length === 0) {
             this.hideAutocompleteSuggestions(suggestionsId);
             return;
         }
 
-        suggestionsDiv.innerHTML = '';
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'block';
 
-        results.forEach((result, index) => {
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-            if (index === 0) item.classList.add('active');
+        results.forEach(result => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'autocomplete-suggestion-item';
 
-            // Format display name
-            const displayName = this.formatAutocompleteDisplay(result);
-            item.innerHTML = `<strong>${displayName.name}</strong><br><small>${displayName.details}</small>`;
+            // Costruisci il display name
+            const displayName = result.display_name;
+            const parts = displayName.split(',');
+            const shortName = parts.slice(0, 3).join(',');
 
-            item.addEventListener('click', () => {
-                input.value = displayName.name;
+            suggestion.innerHTML = `
+                <div class="suggestion-name">${shortName}</div>
+                <div class="suggestion-type">${result.type || 'location'}</div>
+            `;
+
+            suggestion.addEventListener('click', () => {
+                // Usa solo la prima parte del nome (città/località)
+                inputElement.value = parts[0].trim();
                 this.hideAutocompleteSuggestions(suggestionsId);
             });
 
-            suggestionsDiv.appendChild(item);
+            suggestionsContainer.appendChild(suggestion);
         });
-
-        suggestionsDiv.style.display = 'block';
-    }
-
-    formatAutocompleteDisplay(result) {
-        const address = result.address || {};
-        let name = '';
-        let details = '';
-
-        // Determine the name
-        if (result.namedetails && result.namedetails.name) {
-            name = result.namedetails.name;
-        } else if (address.city) {
-            name = address.city;
-        } else if (address.town) {
-            name = address.town;
-        } else if (address.village) {
-            name = address.village;
-        } else if (address.municipality) {
-            name = address.municipality;
-        } else if (address.aeroway) {
-            name = address.aeroway;
-        } else if (result.display_name) {
-            // Extract first part of display name
-            name = result.display_name.split(',')[0];
-        } else {
-            name = 'Location';
-        }
-
-        // Build details string
-        const detailParts = [];
-        if (address.state) detailParts.push(address.state);
-        if (address.country) detailParts.push(address.country);
-        details = detailParts.join(', ');
-
-        if (!details && result.display_name) {
-            // Use parts of display_name if no address details
-            const parts = result.display_name.split(',').slice(1, 3);
-            details = parts.join(',').trim();
-        }
-
-        return { name, details };
-    }
-
-    setActiveAutocompleteItem(items, index) {
-        items.forEach(item => item.classList.remove('active'));
-        if (items[index]) {
-            items[index].classList.add('active');
-            items[index].scrollIntoView({ block: 'nearest' });
-        }
     }
 
     hideAutocompleteSuggestions(suggestionsId) {
-        const suggestionsDiv = document.getElementById(suggestionsId);
-        if (suggestionsDiv) {
-            suggestionsDiv.style.display = 'none';
-            suggestionsDiv.innerHTML = '';
+        const suggestionsContainer = document.getElementById(suggestionsId);
+        if (suggestionsContainer) {
+            suggestionsContainer.style.display = 'none';
+            suggestionsContainer.innerHTML = '';
         }
     }
 
-    
     async calculateFlightData() {
         this.showLoading(true);
         try {

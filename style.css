@@ -1294,59 +1294,59 @@ input.form-control {
 }
 
 
-/* ========================================
-   AUTOCOMPLETE WAYPOINTS STYLING
-   ======================================== */
-
-/* Autocomplete Suggestions Container */
+/* Autocomplete Suggestions Styling */
 .autocomplete-suggestions {
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #004aad;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-top: none;
-    border-radius: 0 0 4px 4px;
-    max-height: 200px;
+    border-radius: 0 0 var(--radius-base) var(--radius-base);
+    max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: none;
+    box-shadow: var(--shadow-lg);
+    margin-top: 2px;
 }
 
-/* Individual Autocomplete Item */
-.autocomplete-item {
-    padding: 10px;
+.autocomplete-suggestion-item {
+    padding: var(--space-12) var(--space-16);
     cursor: pointer;
-    border-bottom: 1px solid #e0e0e0;
-    transition: background-color 0.2s;
+    border-bottom: 1px solid var(--color-border);
+    transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
-.autocomplete-item:last-child {
+.autocomplete-suggestion-item:last-child {
     border-bottom: none;
 }
 
-/* Hover and Active States */
-.autocomplete-item:hover,
-.autocomplete-item.active {
-    background-color: #e8f4fd;
+.autocomplete-suggestion-item:hover {
+    background-color: var(--color-secondary);
 }
 
-/* Location Name (Bold) */
-.autocomplete-item strong {
-    color: #004aad;
-    display: block;
-    margin-bottom: 2px;
+.suggestion-name {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-4);
 }
 
-/* Location Details (Small) */
-.autocomplete-item small {
-    color: #666;
-    font-size: 0.85em;
+.suggestion-type {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-transform: capitalize;
 }
 
-/* Waypoint Input Container (for positioning) */
 .waypoint-input {
     position: relative;
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-16);
+}
+
+/* Ensure autocomplete input has proper z-index when focused */
+.waypoint-autocomplete:focus {
+    position: relative;
+    z-index: 10;
 }
