@@ -1345,7 +1345,6 @@ input.form-control {
     margin-bottom: var(--space-16);
 }
 
-/* Ensure autocomplete input has proper z-index when focused */
 .waypoint-autocomplete:focus {
     position: relative;
     z-index: 10;

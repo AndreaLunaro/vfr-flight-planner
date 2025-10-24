@@ -31,6 +31,10 @@ class VFRFlightPlanner {
         this.lastExcelBlob = null;
         this.lastGeneratedHTML = null;
 
+        // Per gestire l'autocomplete
+        this.autocompleteTimeout = null;
+        this.currentAutocompleteInput = null;
+
         this.init();
     }
 
@@ -177,7 +181,6 @@ class VFRFlightPlanner {
             `;
             container.appendChild(div);
 
-            // Aggiungi event listener per autocomplete
             setTimeout(() => {
                 const input = document.getElementById(`waypoint${i}`);
                 if (input) {
@@ -218,7 +221,6 @@ class VFRFlightPlanner {
             `;
             container.appendChild(div);
 
-            // Aggiungi event listener per autocomplete
             setTimeout(() => {
                 const input = document.getElementById(`alternateWaypoint${i}`);
                 if (input) {
@@ -260,26 +262,23 @@ class VFRFlightPlanner {
         inputElement.addEventListener('input', (e) => {
             const query = e.target.value.trim();
 
-            // Cancella il timeout precedente
             if (this.autocompleteTimeout) {
                 clearTimeout(this.autocompleteTimeout);
             }
 
-            // Se la query è troppo corta, nascondi i suggerimenti
             if (query.length < 2) {
                 this.hideAutocompleteSuggestions(suggestionsId);
                 return;
             }
 
-            // Imposta un nuovo timeout per evitare troppe richieste
             this.autocompleteTimeout = setTimeout(() => {
                 this.searchLocations(query, suggestionsId, inputElement);
-            }, 300);
+            }, 150);
         });
 
-        // Nascondi i suggerimenti quando si clicca fuori
         document.addEventListener('click', (e) => {
-            if (!inputElement.contains(e.target)) {
+            const suggestionsContainer = document.getElementById(suggestionsId);
+            if (suggestionsContainer && !inputElement.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                 this.hideAutocompleteSuggestions(suggestionsId);
             }
         });
@@ -287,17 +286,11 @@ class VFRFlightPlanner {
 
     async searchLocations(query, suggestionsId, inputElement) {
         try {
-            // Priorità ai luoghi italiani
             const italianQuery = `${query}, Italy`;
-            const globalQuery = query;
-
-            // Prima cerca in Italia
-            const italianUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(italianQuery)}&limit=5&addressdetails=1&countrycodes=it`;
+            const italianUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(italianQuery)}&limit=8&addressdetails=1&countrycodes=it`;
 
             const response = await fetch(italianUrl, {
-                headers: {
-                    'User-Agent': 'VFR Flight Planner App'
-                }
+                headers: { 'User-Agent': 'VFR Flight Planner App' }
             });
 
             if (!response.ok) {
@@ -307,21 +300,21 @@ class VFRFlightPlanner {
 
             let results = await response.json();
 
-            // Se non ci sono risultati in Italia, cerca nel mondo
-            if (results.length === 0) {
-                const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(globalQuery)}&limit=5&addressdetails=1`;
+            if (results.length < 3) {
+                const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1`;
                 const globalResponse = await fetch(globalUrl, {
-                    headers: {
-                        'User-Agent': 'VFR Flight Planner App'
-                    }
+                    headers: { 'User-Agent': 'VFR Flight Planner App' }
                 });
 
                 if (globalResponse.ok) {
-                    results = await globalResponse.json();
+                    const globalResults = await globalResponse.json();
+                    const existingIds = new Set(results.map(r => r.place_id));
+                    const newResults = globalResults.filter(r => !existingIds.has(r.place_id));
+                    results = [...results, ...newResults];
                 }
             }
 
-            this.displayAutocompleteSuggestions(results, suggestionsId, inputElement);
+            this.displayAutocompleteSuggestions(results.slice(0, 5), suggestionsId, inputElement);
 
         } catch (error) {
             console.error('Autocomplete error:', error);
@@ -344,7 +337,6 @@ class VFRFlightPlanner {
             const suggestion = document.createElement('div');
             suggestion.className = 'autocomplete-suggestion-item';
 
-            // Costruisci il display name
             const displayName = result.display_name;
             const parts = displayName.split(',');
             const shortName = parts.slice(0, 3).join(',');
@@ -354,8 +346,8 @@ class VFRFlightPlanner {
                 <div class="suggestion-type">${result.type || 'location'}</div>
             `;
 
-            suggestion.addEventListener('click', () => {
-                // Usa solo la prima parte del nome (città/località)
+            suggestion.addEventListener('click', (e) => {
+                e.stopPropagation();
                 inputElement.value = parts[0].trim();
                 this.hideAutocompleteSuggestions(suggestionsId);
             });
