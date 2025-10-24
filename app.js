@@ -31,10 +31,6 @@ class VFRFlightPlanner {
         this.lastExcelBlob = null;
         this.lastGeneratedHTML = null;
 
-        // Per gestire l'autocomplete
-        this.autocompleteTimeout = null;
-        this.currentAutocompleteInput = null;
-
         this.init();
     }
 
@@ -169,24 +165,12 @@ class VFRFlightPlanner {
         for (let i = 0; i < numWaypoints; i++) {
             const div = document.createElement('div');
             div.className = 'waypoint-input';
-            div.style.position = 'relative';
             div.innerHTML = `
                 <label for="waypoint${i}" class="form-label aviation-label">Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input waypoint-autocomplete" 
-                       id="waypoint${i}" 
-                       data-waypoint-index="${i}"
-                       placeholder="Nome città (es. Roma, Milano)" 
-                       autocomplete="off">
-                <div id="waypoint${i}-suggestions" class="autocomplete-suggestions"></div>
+                <input type="text" class="form-control aviation-input" id="waypoint${i}" 
+                       placeholder="Nome città (es. Roma, Milano)" autocomplete="off">
             `;
             container.appendChild(div);
-
-            setTimeout(() => {
-                const input = document.getElementById(`waypoint${i}`);
-                if (input) {
-                    this.setupAutocomplete(input, `waypoint${i}-suggestions`);
-                }
-            }, 100);
         }
         this.showMessage(`${numWaypoints} campi waypoint generati con successo`, 'success');
     }
@@ -209,24 +193,12 @@ class VFRFlightPlanner {
         for (let i = 0; i < numWaypoints; i++) {
             const div = document.createElement('div');
             div.className = 'waypoint-input';
-            div.style.position = 'relative';
             div.innerHTML = `
                 <label for="alternateWaypoint${i}" class="form-label aviation-label">Alternate Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input waypoint-autocomplete" 
-                       id="alternateWaypoint${i}" 
-                       data-waypoint-index="${i}"
-                       placeholder="Nome città (es. Napoli, Venezia)" 
-                       autocomplete="off">
-                <div id="alternateWaypoint${i}-suggestions" class="autocomplete-suggestions"></div>
+                <input type="text" class="form-control aviation-input" id="alternateWaypoint${i}" 
+                       placeholder="Nome città (es. Napoli, Venezia)" autocomplete="off">
             `;
             container.appendChild(div);
-
-            setTimeout(() => {
-                const input = document.getElementById(`alternateWaypoint${i}`);
-                if (input) {
-                    this.setupAutocomplete(input, `alternateWaypoint${i}-suggestions`);
-                }
-            }, 100);
         }
         this.showMessage(`${numWaypoints} campi waypoint alternati generati con successo`, 'success');
     }
@@ -1015,11 +987,6 @@ class VFRFlightPlanner {
             }
 
             console.log('Calling HTML to PDF API (FINAL OPTIMIZED A4)...');
-            console.log('HTML length:', this.lastGeneratedHTML.length, 'characters');
-
-            // Timeout controller per evitare attese infinite
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondi timeout
 
             const response = await fetch('/api/html-to-pdf', {
                 method: 'POST',
@@ -1028,18 +995,14 @@ class VFRFlightPlanner {
                 },
                 body: JSON.stringify({
                     htmlContent: this.lastGeneratedHTML
-                }),
-                signal: controller.signal
+                })
             });
-
-            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 let errorMessage = 'Errore API PDF';
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || `HTTP ${response.status}`;
-                    console.error('API Error Details:', errorData);
                 } catch (e) {
                     errorMessage = `HTTP Error: ${response.status}`;
                 }
@@ -1049,7 +1012,6 @@ class VFRFlightPlanner {
             console.log('PDF FINAL OPTIMIZED A4 response received, downloading...');
 
             const pdfBlob = await response.blob();
-            console.log('PDF Blob size:', pdfBlob.size, 'bytes');
 
             if (pdfBlob.size === 0) {
                 throw new Error('PDF vuoto ricevuto dal server');
@@ -1061,10 +1023,6 @@ class VFRFlightPlanner {
             console.log('PDF FINAL OPTIMIZED A4 downloaded successfully');
 
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.error('PDF Generation Timeout:', error);
-                throw new Error('Timeout nella generazione PDF (60s). Riprova con meno waypoint.');
-            }
             console.error('PDF Generation Error:', error);
             throw new Error(`Errore conversione HTML→PDF: ${error.message}`);
         }
