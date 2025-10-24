@@ -253,117 +253,6 @@ class VFRFlightPlanner {
         }
     }
 
-
-    // ===== AUTOCOMPLETE FUNCTIONS =====
-
-    setupAutocomplete(inputElement, suggestionsId) {
-        if (!inputElement) return;
-
-        inputElement.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-
-            if (this.autocompleteTimeout) {
-                clearTimeout(this.autocompleteTimeout);
-            }
-
-            if (query.length < 2) {
-                this.hideAutocompleteSuggestions(suggestionsId);
-                return;
-            }
-
-            this.autocompleteTimeout = setTimeout(() => {
-                this.searchLocations(query, suggestionsId, inputElement);
-            }, 150);
-        });
-
-        document.addEventListener('click', (e) => {
-            const suggestionsContainer = document.getElementById(suggestionsId);
-            if (suggestionsContainer && !inputElement.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                this.hideAutocompleteSuggestions(suggestionsId);
-            }
-        });
-    }
-
-    async searchLocations(query, suggestionsId, inputElement) {
-        try {
-            const italianQuery = `${query}, Italy`;
-            const italianUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(italianQuery)}&limit=8&addressdetails=1&countrycodes=it`;
-
-            const response = await fetch(italianUrl, {
-                headers: { 'User-Agent': 'VFR Flight Planner App' }
-            });
-
-            if (!response.ok) {
-                console.error('Autocomplete search failed');
-                return;
-            }
-
-            let results = await response.json();
-
-            if (results.length < 3) {
-                const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1`;
-                const globalResponse = await fetch(globalUrl, {
-                    headers: { 'User-Agent': 'VFR Flight Planner App' }
-                });
-
-                if (globalResponse.ok) {
-                    const globalResults = await globalResponse.json();
-                    const existingIds = new Set(results.map(r => r.place_id));
-                    const newResults = globalResults.filter(r => !existingIds.has(r.place_id));
-                    results = [...results, ...newResults];
-                }
-            }
-
-            this.displayAutocompleteSuggestions(results.slice(0, 5), suggestionsId, inputElement);
-
-        } catch (error) {
-            console.error('Autocomplete error:', error);
-        }
-    }
-
-    displayAutocompleteSuggestions(results, suggestionsId, inputElement) {
-        const suggestionsContainer = document.getElementById(suggestionsId);
-        if (!suggestionsContainer) return;
-
-        if (results.length === 0) {
-            this.hideAutocompleteSuggestions(suggestionsId);
-            return;
-        }
-
-        suggestionsContainer.innerHTML = '';
-        suggestionsContainer.style.display = 'block';
-
-        results.forEach(result => {
-            const suggestion = document.createElement('div');
-            suggestion.className = 'autocomplete-suggestion-item';
-
-            const displayName = result.display_name;
-            const parts = displayName.split(',');
-            const shortName = parts.slice(0, 3).join(',');
-
-            suggestion.innerHTML = `
-                <div class="suggestion-name">${shortName}</div>
-                <div class="suggestion-type">${result.type || 'location'}</div>
-            `;
-
-            suggestion.addEventListener('click', (e) => {
-                e.stopPropagation();
-                inputElement.value = parts[0].trim();
-                this.hideAutocompleteSuggestions(suggestionsId);
-            });
-
-            suggestionsContainer.appendChild(suggestion);
-        });
-    }
-
-    hideAutocompleteSuggestions(suggestionsId) {
-        const suggestionsContainer = document.getElementById(suggestionsId);
-        if (suggestionsContainer) {
-            suggestionsContainer.style.display = 'none';
-            suggestionsContainer.innerHTML = '';
-        }
-    }
-
     async calculateFlightData() {
         this.showLoading(true);
         try {
@@ -1126,6 +1015,11 @@ class VFRFlightPlanner {
             }
 
             console.log('Calling HTML to PDF API (FINAL OPTIMIZED A4)...');
+            console.log('HTML length:', this.lastGeneratedHTML.length, 'characters');
+
+            // Timeout controller per evitare attese infinite
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondi timeout
 
             const response = await fetch('/api/html-to-pdf', {
                 method: 'POST',
@@ -1134,14 +1028,18 @@ class VFRFlightPlanner {
                 },
                 body: JSON.stringify({
                     htmlContent: this.lastGeneratedHTML
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 let errorMessage = 'Errore API PDF';
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || `HTTP ${response.status}`;
+                    console.error('API Error Details:', errorData);
                 } catch (e) {
                     errorMessage = `HTTP Error: ${response.status}`;
                 }
@@ -1151,6 +1049,7 @@ class VFRFlightPlanner {
             console.log('PDF FINAL OPTIMIZED A4 response received, downloading...');
 
             const pdfBlob = await response.blob();
+            console.log('PDF Blob size:', pdfBlob.size, 'bytes');
 
             if (pdfBlob.size === 0) {
                 throw new Error('PDF vuoto ricevuto dal server');
@@ -1162,6 +1061,10 @@ class VFRFlightPlanner {
             console.log('PDF FINAL OPTIMIZED A4 downloaded successfully');
 
         } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('PDF Generation Timeout:', error);
+                throw new Error('Timeout nella generazione PDF (60s). Riprova con meno waypoint.');
+            }
             console.error('PDF Generation Error:', error);
             throw new Error(`Errore conversione HTML→PDF: ${error.message}`);
         }
