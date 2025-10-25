@@ -1378,7 +1378,7 @@ input.form-control {
 }
 
 
-/* ===== WEIGHT AND BALANCE STATUS STYLES ===== */
+/* ===== WEIGHT AND BALANCE STYLES ===== */
 .wb-status {
     display: inline-block;
     padding: 6px 12px;
@@ -1400,11 +1400,10 @@ input.form-control {
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Aircraft selector styling */
+/* Aircraft selector */
 #aircraftSelect {
     font-weight: 600;
     border: 2px solid var(--color-teal-500);
-    transition: all 0.3s ease;
 }
 
 #aircraftSelect:focus {
@@ -1412,7 +1411,7 @@ input.form-control {
     box-shadow: 0 0 0 0.2rem rgba(31, 184, 205, 0.25);
 }
 
-/* Weight Balance table enhancements */
+/* Weight Balance table */
 #wbTable .total-row {
     background-color: var(--color-bg-1);
     font-weight: 700;
@@ -1429,7 +1428,12 @@ input.form-control {
     color: var(--color-slate-700);
 }
 
-/* Dark mode support */
+#wbTable .weight-input {
+    text-align: right;
+    font-weight: 600;
+}
+
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
     .wb-status-ok {
         background-color: rgba(34, 197, 94, 0.2);
