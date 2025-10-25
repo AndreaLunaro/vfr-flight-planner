@@ -104,11 +104,9 @@ class VFRFlightPlanner {
     }
 
     async getAutocompleteSuggestions(query) {
-        // Search with Italian priority first, then worldwide
-        const italianQuery = `${query}, Italia`;
-
         try {
-            // First try Italian locations
+            // Search with Italian priority first
+            const italianQuery = `${query}, Italia`;
             const italianResults = await this.searchLocation(italianQuery, true);
 
             // Then try worldwide if we need more results
@@ -143,7 +141,6 @@ class VFRFlightPlanner {
 
             return data
                 .filter(item => {
-                    // Filter for Italian locations if prioritizing Italy
                     if (prioritizeItaly) {
                         return item.address && (
                             item.address.country === 'Italia' || 
@@ -166,7 +163,6 @@ class VFRFlightPlanner {
     }
 
     getShortName(item) {
-        // Create a shorter, more readable name
         if (item.address) {
             const parts = [];
             if (item.address.city) parts.push(item.address.city);
@@ -182,7 +178,6 @@ class VFRFlightPlanner {
             }
         }
 
-        // Fallback to display name (truncated)
         const displayName = item.display_name || '';
         const parts = displayName.split(',').slice(0, 2);
         return parts.join(',');
@@ -192,9 +187,7 @@ class VFRFlightPlanner {
         const seen = new Set();
         return suggestions.filter(suggestion => {
             const key = `${suggestion.lat.toFixed(4)},${suggestion.lon.toFixed(4)}`;
-            if (seen.has(key)) {
-                return false;
-            }
+            if (seen.has(key)) return false;
             seen.add(key);
             return true;
         });
@@ -691,12 +684,17 @@ class VFRFlightPlanner {
             throw new Error('Inserire almeno un waypoint alternato');
         }
 
-        const geocodedAlternateWaypoints = await this.geocodeAlternateWaypoints(alternateWaypoints);
-        this.flightData.alternateWaypoints = geocodedAlternateWaypoints;
-        this.flightData.alternateResults = await this.calculateRoute(geocodedAlternateWaypoints);
-        this.calculateAlternateFuelData();
-        this.updateAlternateTable();
-        this.updateAlternateFuelDisplay();
+        try {
+            const geocodedAlternateWaypoints = await this.geocodeAlternateWaypoints(alternateWaypoints);
+            this.flightData.alternateWaypoints = geocodedAlternateWaypoints;
+            this.flightData.alternateResults = await this.calculateRoute(geocodedAlternateWaypoints);
+            this.calculateAlternateFuelData();
+            this.updateAlternateTable();
+            this.updateAlternateFuelDisplay();
+        } catch (error) {
+            console.error('Alternate route calculation error:', error);
+            throw error; // Re-throw to be caught by parent
+        }
     }
 
     // ===== EXPORT FUNCTIONS FINALE OTTIMIZZATE =====
@@ -1229,10 +1227,31 @@ class VFRFlightPlanner {
         if (!modal) return;
 
         if (show) {
-            new bootstrap.Modal(modal).show();
+            // Store instance for later use
+            if (!this.loadingModalInstance) {
+                this.loadingModalInstance = new bootstrap.Modal(modal, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+            }
+            this.loadingModalInstance.show();
         } else {
-            const instance = bootstrap.Modal.getInstance(modal);
-            if (instance) instance.hide();
+            // Try to get instance and hide it
+            if (this.loadingModalInstance) {
+                this.loadingModalInstance.hide();
+            } else {
+                const instance = bootstrap.Modal.getInstance(modal);
+                if (instance) {
+                    instance.hide();
+                } else {
+                    // Fallback: remove modal backdrop manually
+                    modal.classList.remove('show');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                }
+            }
         }
     }
 
