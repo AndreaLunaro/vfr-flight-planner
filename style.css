@@ -1292,3 +1292,67 @@ input.form-control {
 #tripFuel, #contingencyFuel, #reserveFuel, #totalFuel, #alternateFuel {
   color: #000 !important;
 }
+
+
+
+/* Autocomplete Suggestions Styling */
+.waypoint-input {
+    position: relative;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-base) var(--radius-base);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: var(--shadow-md);
+    margin-top: -1px;
+}
+
+.autocomplete-item {
+    padding: var(--space-8) var(--space-12);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+    border-bottom: 1px solid var(--color-card-border-inner);
+    font-size: var(--font-size-sm);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background-color: var(--color-secondary);
+}
+
+.autocomplete-item:active {
+    background-color: var(--color-secondary-active);
+}
+
+/* Dark mode autocomplete */
+@media (prefers-color-scheme: dark) {
+    .autocomplete-suggestions {
+        background: var(--color-surface);
+        border-color: var(--color-border-secondary);
+    }
+
+    .autocomplete-item:hover {
+        background-color: var(--color-secondary-hover);
+    }
+}
+
+[data-color-scheme="dark"] .autocomplete-suggestions {
+    background: var(--color-surface);
+    border-color: var(--color-border-secondary);
+}
+
+[data-color-scheme="dark"] .autocomplete-item:hover {
+    background-color: var(--color-secondary-hover);
+}
