@@ -67,12 +67,12 @@ class VFRFlightPlanner {
     // ===== AUTOCOMPLETE FUNCTIONS =====
     setupAutocomplete(inputElement) {
         let autocompleteTimeout = null;
-        let currentSuggestions = [];
 
         // Create autocomplete container
         const autocompleteContainer = document.createElement('div');
         autocompleteContainer.className = 'autocomplete-suggestions';
         autocompleteContainer.style.display = 'none';
+        inputElement.parentElement.style.position = 'relative';
         inputElement.parentElement.appendChild(autocompleteContainer);
 
         inputElement.addEventListener('input', (e) => {
@@ -106,7 +106,6 @@ class VFRFlightPlanner {
     async getAutocompleteSuggestions(query) {
         // Search with Italian priority first, then worldwide
         const italianQuery = `${query}, Italia`;
-        const worldQuery = query;
 
         try {
             // First try Italian locations
@@ -115,7 +114,7 @@ class VFRFlightPlanner {
             // Then try worldwide if we need more results
             let worldResults = [];
             if (italianResults.length < 3) {
-                worldResults = await this.searchLocation(worldQuery, false);
+                worldResults = await this.searchLocation(query, false);
             }
 
             // Combine and limit to 5 suggestions
@@ -229,7 +228,6 @@ class VFRFlightPlanner {
         });
     }
 
-
     bindEvents() {
         // Flight Planning Events
         const addWaypointsBtn = document.getElementById('addWaypoints');
@@ -334,10 +332,16 @@ class VFRFlightPlanner {
             div.className = 'waypoint-input';
             div.innerHTML = `
                 <label for="waypoint${i}" class="form-label aviation-label">Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input" id="waypoint${i}" 
+                <input type="text" class="form-control aviation-input waypoint-autocomplete" id="waypoint${i}" 
                        placeholder="Nome città (es. Roma, Milano)" autocomplete="off">
             `;
             container.appendChild(div);
+
+            // Setup autocomplete for this input
+            const input = div.querySelector(`#waypoint${i}`);
+            if (input) {
+                this.setupAutocomplete(input);
+            }
         }
         this.showMessage(`${numWaypoints} campi waypoint generati con successo`, 'success');
     }
@@ -362,10 +366,16 @@ class VFRFlightPlanner {
             div.className = 'waypoint-input';
             div.innerHTML = `
                 <label for="alternateWaypoint${i}" class="form-label aviation-label">Alternate Waypoint ${i + 1}</label>
-                <input type="text" class="form-control aviation-input" id="alternateWaypoint${i}" 
+                <input type="text" class="form-control aviation-input waypoint-autocomplete" id="alternateWaypoint${i}" 
                        placeholder="Nome città (es. Napoli, Venezia)" autocomplete="off">
             `;
             container.appendChild(div);
+
+            // Setup autocomplete for this input
+            const input = div.querySelector(`#alternateWaypoint${i}`);
+            if (input) {
+                this.setupAutocomplete(input);
+            }
         }
         this.showMessage(`${numWaypoints} campi waypoint alternati generati con successo`, 'success');
     }
@@ -457,12 +467,25 @@ class VFRFlightPlanner {
 
     async geocodeWaypoints(waypoints) {
         const geocoded = [];
-        for (const waypoint of waypoints) {
-            const query = `${waypoint}, Italia`;
+        for (let i = 0; i < waypoints.length; i++) {
+            const waypoint = waypoints[i];
             try {
-                // Try Nominatim
-                const coords = await this.geocodeWithNominatim(query);
+                let coords = { lat: null, lon: null };
+
+                // Check if we have stored coordinates from autocomplete
+                const inputElement = document.getElementById(`waypoint${i}`);
+                if (inputElement && inputElement.dataset.lat && inputElement.dataset.lon) {
+                    coords.lat = parseFloat(inputElement.dataset.lat);
+                    coords.lon = parseFloat(inputElement.dataset.lon);
+                } else {
+                    // Fallback to geocoding
+                    const query = `${waypoint}, Italia`;
+                    coords = await this.geocodeWithNominatim(query);
+                }
+
+                // Get elevation from internet and add base altitude of 1500 feet
                 const elevation = await this.getElevation(coords.lat, coords.lon);
+
                 geocoded.push({
                     name: waypoint,
                     lat: coords.lat,
@@ -498,6 +521,42 @@ class VFRFlightPlanner {
             lat: parseFloat(data[0].lat),
             lon: parseFloat(data[0].lon)
         };
+    }
+
+
+    async geocodeAlternateWaypoints(waypoints) {
+        const geocoded = [];
+        for (let i = 0; i < waypoints.length; i++) {
+            const waypoint = waypoints[i];
+            try {
+                let coords = { lat: null, lon: null };
+
+                // Check if we have stored coordinates from autocomplete
+                const inputElement = document.getElementById(`alternateWaypoint${i}`);
+                if (inputElement && inputElement.dataset.lat && inputElement.dataset.lon) {
+                    coords.lat = parseFloat(inputElement.dataset.lat);
+                    coords.lon = parseFloat(inputElement.dataset.lon);
+                } else {
+                    // Fallback to geocoding
+                    const query = `${waypoint}, Italia`;
+                    coords = await this.geocodeWithNominatim(query);
+                }
+
+                // Get elevation from internet and add base altitude of 1500 feet
+                const elevation = await this.getElevation(coords.lat, coords.lon);
+
+                geocoded.push({
+                    name: waypoint,
+                    lat: coords.lat,
+                    lon: coords.lon,
+                    elevation: elevation
+                });
+            } catch (error) {
+                console.error(`Geocoding error for ${waypoint}:`, error);
+                throw new Error(`Impossibile geocodificare: ${waypoint}`);
+            }
+        }
+        return geocoded;
     }
 
     async getElevation(lat, lon) {
@@ -632,7 +691,7 @@ class VFRFlightPlanner {
             throw new Error('Inserire almeno un waypoint alternato');
         }
 
-        const geocodedAlternateWaypoints = await this.geocodeWaypoints(alternateWaypoints);
+        const geocodedAlternateWaypoints = await this.geocodeAlternateWaypoints(alternateWaypoints);
         this.flightData.alternateWaypoints = geocodedAlternateWaypoints;
         this.flightData.alternateResults = await this.calculateRoute(geocodedAlternateWaypoints);
         this.calculateAlternateFuelData();
@@ -643,7 +702,7 @@ class VFRFlightPlanner {
     // ===== EXPORT FUNCTIONS FINALE OTTIMIZZATE =====
 
     // FUNZIONE PRINCIPALE: Export Excel + PDF finale ottimizzato
-    async exportExcelAndPDF() {
+        async exportExcelAndPDF() {
         if (!this.flightData.flightResults || this.flightData.flightResults.length === 0) {
             this.showMessage('Nessun dato di volo da esportare. Calcolare prima il piano di volo.', 'error');
             return;
@@ -651,20 +710,16 @@ class VFRFlightPlanner {
 
         try {
             this.showLoading(true);
-            this.showMessage('Generazione Excel e PDF finale ottimizzato in corso...', 'info');
+            this.showMessage('Generazione Excel in corso (PDF temporaneamente disabilitato)...', 'info');
 
-            // Step 1: Genera Excel (mantenuto identico)
+            // Step 1: Genera solo Excel
             await this.exportToExcelWithTemplate();
 
-            // Step 2: Genera HTML FINALE OTTIMIZZATO
-            this.showMessage('Generazione HTML finale ottimizzato...', 'info');
-            this.lastGeneratedHTML = this.generateExcelReplicaHTML();
+            // Step 2 e 3: PDF COMPLETAMENTE DISABILITATI
+            // this.lastGeneratedHTML = this.generateExcelReplicaHTML();
+            // await this.generatePDFFromHTML();
 
-            // Step 3: Converti HTML in PDF finale ottimizzato
-            this.showMessage('Conversione HTML→PDF finale ottimizzato...', 'info');
-            await this.generatePDFFromHTML();
-
-            this.showMessage('Export completato! Excel e PDF finale ottimizzato scaricati con successo.', 'success');
+            this.showMessage('Export Excel completato! (PDF temporaneamente disabilitato)', 'success');
 
         } catch (error) {
             console.error('Export error:', error);
@@ -673,480 +728,6 @@ class VFRFlightPlanner {
             this.showLoading(false);
         }
     }
-       // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
-    // VERSIONE FINALE OTTIMIZZATA: Occupa completamente il foglio A4 landscape
-    
-   
-   
-    
-    generateExcelReplicaHTML() {
-        const currentDate = new Date().toLocaleDateString('it-IT');
-        const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-
-        // Raccoglie i dati
-        const flightSpeed = document.getElementById('flightSpeed')?.value || 90;
-        const fuelConsumption = document.getElementById('fuelConsumption')?.value || 30;
-
-        // Calcola totali
-        const totalDistance = this.flightData.flightResults.reduce((s, r) => s + (r.distance || 0), 0);
-        const totalFlightTime = this.flightData.flightResults.reduce((s, r) => s + (r.flightTime || 0), 0);
-        const totalFuel = this.flightData.fuelData.totalFuel || 0;
-
-        let html = `<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>VFR Flight Plan - A4 Single Page 15 Waypoints</title>
-    <style>
-        /* Pagina A4 landscape ottimizzata */
-        @page {
-            size: A4 landscape;
-            margin: 5mm;
-            box-sizing: border-box;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.1;
-            color: #000;
-            background: #fff;
-            width: 100%;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Container A4 con altezza fissa calcolata */
-        .flight-plan-container {
-            width: 100%;
-            max-width: 287mm; /* A4 landscape - margini 5mm */
-            height: 200mm; /* A4 height - margini 5mm */
-            margin: 0 auto;
-            background: #fff;
-            border: 1px solid #000;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-        }
-
-        /* Header */
-        .main-header {
-            text-align: center;
-            background: #1e40af;
-            color: white;
-            padding: 3px;
-            font-size: 16px;
-            font-weight: bold;
-            border-bottom: 1px solid #000;
-            flex-shrink: 0;
-        }
-
-        /* Info generali */
-        .flight-info {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 6px;
-            background: #f8fafc;
-            border-bottom: 1px solid #ccc;
-            font-size: 11px;
-            height: 16px;
-            flex-shrink: 0;
-            align-items: center;
-        }
-
-        .info-left, .info-center, .info-right {
-            flex: 1;
-            font-weight: 600;
-        }
-
-        /* Sezione note: 80px come richiesto */
-        .notes-section {
-            margin: 2px 4px;
-            padding: 4px;
-            background: #f9f9f9;
-            border: 1px solid #666;
-            height: 80px; /* FISSO 80px */
-            flex-shrink: 0;
-        }
-
-        .notes-label {
-            font-size: 11px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .notes-lines {
-            margin-top: 8px;
-            background-image: repeating-linear-gradient(
-                transparent,
-                transparent 10px,
-                #ddd 10px,
-                #ddd 11px
-            );
-            height: 62px;
-        }
-
-        /* Layout principale: PRENDE TUTTO LO SPAZIO RIMANENTE */
-        .main-layout {
-            display: flex;
-            gap: 4px;
-            padding: 2px 4px;
-            flex: 1; /* PRENDE TUTTO LO SPAZIO DISPONIBILE */
-            min-height: 0;
-        }
-
-        /* Sezioni flight plan che si espandono */
-        .main-section, .alternate-section {
-            flex: 1;
-            border: 1px solid #000;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        /* Header sezioni */
-        .section-title {
-            background: #1e40af;
-            color: white;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            padding: 2px;
-            border-bottom: 1px solid #000;
-            flex-shrink: 0;
-        }
-
-        /* Tabelle che si espandono per prendere tutto lo spazio */
-        .flight-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px;  /* Ridotto per 15 righe */
-            table-layout: fixed;
-            flex: 1; /* SI ESPANDE per prendere tutto lo spazio */
-        }
-
-        .flight-table th {
-            background: #3b82f6;
-            color: white;
-            font-weight: bold;
-            font-size: 9px;  /* Ridotto per header compatti */
-            padding: 1px;
-            text-align: center;
-            border: 1px solid #000;
-            height: 14px;  /* Ridotto per più righe */
-        }
-
-        /* Celle con altezza ridotta per 15 righe */
-        .flight-table td {
-            border: 1px solid #666;
-            padding: 1px;
-            text-align: center;
-            font-size: 9px;  /* Ridotto per più contenuto */
-            height: 12px;  /* RIDOTTO per 15 righe */
-            vertical-align: middle;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .waypoint-name {
-            text-align: left !important;
-            font-weight: bold;
-            padding-left: 2px;
-            font-size: 9px;
-        }
-
-        .time-column {
-            background: #f0f9ff;
-            font-weight: 600;
-        }
-
-        /* SEZIONE FINALE UNIFICATA - NON DIVISA */
-        .bottom-unified-section {
-            margin: 2px 4px;
-            padding: 4px;
-            background: #f8fafc;
-            border: 1px solid #000;
-            height: 35px; /* ALTEZZA RIDOTTA ma sufficiente */
-            flex-shrink: 0;
-        }
-
-        .bottom-unified-section h3 {
-            background: #1e40af;
-            color: white;
-            text-align: center;
-            font-size: 11px;
-            margin: -4px -4px 4px -4px;
-            padding: 2px;
-            border-bottom: 1px solid #000;
-        }
-
-        /* Layout orizzontale per fuel e block times */
-        .bottom-content {
-            display: flex;
-            gap: 6px;
-            height: 24px;
-            font-size: 10px;
-        }
-
-        .fuel-info, .block-info {
-            flex: 1;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            white-space: nowrap;
-        }
-
-        .info-label {
-            font-weight: bold;
-            margin-right: 4px;
-            font-size: 9px;
-        }
-
-        .info-value {
-            font-weight: bold;
-            color: #1e40af;
-            font-size: 10px;
-        }
-
-        .total-required {
-            background: #fef3c7;
-            padding: 1px 4px;
-            border-radius: 2px;
-        }
-
-        /* Footer minimo */
-        .footer-info {
-            text-align: center;
-            font-size: 8px;
-            color: #666;
-            padding: 1px;
-            border-top: 1px solid #ccc;
-            flex-shrink: 0;
-        }
-
-        /* Print rules */
-        @media print {
-            body { 
-                margin: 0; 
-                overflow: visible; 
-            }
-            .flight-plan-container {
-                page-break-inside: avoid;
-                max-width: 100%;
-                height: 100vh;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="flight-plan-container">
-        <!-- Header -->
-        <div class="main-header">
-            VFR FLIGHT PLAN - PIANO DI VOLO VFR (15 Waypoints)
-        </div>
-
-        <!-- Info Generali -->
-        <div class="flight-info">
-            <div class="info-left">
-                <strong>Data:</strong> ${currentDate} <strong>Ora:</strong> ${currentTime}
-            </div>
-            <div class="info-center">
-                <strong>Velocità:</strong> ${flightSpeed} kt <strong>Consumo:</strong> ${fuelConsumption} l/h
-            </div>
-            <div class="info-right">
-                <strong>Distanza Tot:</strong> ${Math.round(totalDistance * 10) / 10} NM <strong>Tempo Tot:</strong> ${Math.round(totalFlightTime)} min
-            </div>
-        </div>
-
-        <!-- Sezione Note: 80px fisso -->
-        <div class="notes-section">
-            <div class="notes-label">NOTES / NOTE:</div>
-            <div class="notes-lines"></div>
-        </div>
-
-        <!-- Layout Principale: PRENDE TUTTO LO SPAZIO -->
-        <div class="main-layout">
-            <!-- Main Flight Plan -->
-            <div class="main-section">
-                <div class="section-title">MAIN FLIGHT PLAN</div>
-                <table class="flight-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 18%">FIX</th>
-                            <th style="width: 9%">Route</th>
-                            <th style="width: 9%">Alt[Ft]</th>
-                            <th style="width: 11%">Dist[NM]</th>
-                            <th style="width: 9%">Radial</th>
-                            <th style="width: 11%">Time[min]</th>
-                            <th style="width: 11%">ETO</th>
-                            <th style="width: 11%">ATO</th>
-                            <th style="width: 11%">RETO</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-        // 15 righe per supportare il massimo numero di waypoints
-        const maxMainRows = 15;
-        for (let i = 0; i < maxMainRows; i++) {
-            html += `<tr>`;
-            if (this.flightData.flightResults[i] && i < this.flightData.flightResults.length) {
-                const result = this.flightData.flightResults[i];
-                html += `
-                    <td class="waypoint-name">${result.fix.split(',')[0]}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(result.route) || 0) : '---'}</td>
-                    <td>${Math.round(result.altitude || 0)}</td>
-                    <td>${i > 0 ? Math.round(result.distance || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(result.radial) || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(result.flightTime || 0) : '---'}</td>
-                    <td class="time-column">____</td>
-                    <td class="time-column">____</td>
-                    <td class="time-column">____</td>`;
-            } else {
-                html += `
-                    <td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td>
-                    <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
-            }
-            html += `</tr>`;
-        }
-
-        html += `
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Alternate Airport -->
-            <div class="alternate-section">
-                <div class="section-title">ALTERNATE AIRPORT</div>
-                <table class="flight-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 18%">FIX ALT</th>
-                            <th style="width: 9%">Route</th>
-                            <th style="width: 9%">Alt[Ft]</th>
-                            <th style="width: 11%">Dist[NM]</th>
-                            <th style="width: 9%">Radial</th>
-                            <th style="width: 11%">Time[min]</th>
-                            <th style="width: 11%">ETO</th>
-                            <th style="width: 11%">ATO</th>
-                            <th style="width: 11%">RETO</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-        // 15 righe anche per l'alternato (per simmetria e flessibilità)
-        const maxAltRows = 15;
-        for (let i = 0; i < maxAltRows; i++) {
-            html += `<tr>`;
-            if (this.flightData.alternateResults[i] && i < this.flightData.alternateResults.length) {
-                const altResult = this.flightData.alternateResults[i];
-                html += `
-                    <td class="waypoint-name">${altResult.fix.split(',')[0]}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(altResult.route) || 0) : '---'}</td>
-                    <td>${Math.round(altResult.altitude || 0)}</td>
-                    <td>${i > 0 ? Math.round(altResult.distance || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(parseFloat(altResult.radial) || 0) : '---'}</td>
-                    <td>${i > 0 ? Math.round(altResult.flightTime || 0) : '---'}</td>
-                    <td class="time-column">____</td>
-                    <td class="time-column">____</td>
-                    <td class="time-column">____</td>`;
-            } else {
-                html += `
-                    <td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td>
-                    <td class="time-column">____</td><td class="time-column">____</td><td class="time-column">____</td>`;
-            }
-            html += `</tr>`;
-        }
-
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- SEZIONE FINALE UNIFICATA - NON DIVISA -->
-        <div class="bottom-unified-section">
-            <h3>FUEL CALCULATION & BLOCK TIMES</h3>
-            <div class="bottom-content">
-                <div class="fuel-info">
-                    <div class="info-item">
-                        <span class="info-label">Trip:</span>
-                        <span class="info-value">${this.flightData.fuelData.tripFuel || 0}L</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Alt:</span>
-                        <span class="info-value">${this.flightData.alternateFuelData.alternateFuel || 0}L</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Cont(5%):</span>
-                        <span class="info-value">${this.flightData.fuelData.contingencyFuel || 0}L</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Res(45m):</span>
-                        <span class="info-value">${this.flightData.fuelData.reserveFuel || 0}L</span>
-                    </div>
-                    <div class="info-item total-required">
-                        <span class="info-label">TOTAL REQ:</span>
-                        <span class="info-value">${totalFuel}L</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">On Board:</span>
-                        <span class="info-value">____L</span>
-                    </div>
-                </div>
-                <div class="block-info">
-                    <div class="info-item">
-                        <span class="info-label">Block Out:</span>
-                        <span class="info-value">_____</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Block In:</span>
-                        <span class="info-value">_____</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Block Time:</span>
-                        <span class="info-value">___min</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Total Flight:</span>
-                        <span class="info-value">${Math.round(totalFlightTime)}min</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Distance:</span>
-                        <span class="info-value">${Math.round(totalDistance * 10) / 10}NM</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Avg GS:</span>
-                        <span class="info-value">${totalFlightTime > 0 ? Math.round(totalDistance / (totalFlightTime/60) * 10) / 10 : 0}kt</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer-info">
-            VFR Flight Planner - ${currentDate} ${currentTime}
-        </div>
-    </div>
-</body>
-</html>`;
-
-        return html;
-    }
-
-
-    // FUNZIONE: Converte HTML in PDF tramite API finale ottimizzata
     async generatePDFFromHTML() {
         try {
             if (!this.lastGeneratedHTML) {
