@@ -2,13 +2,10 @@
   "name": "vfr-planner",
   "version": "1.0.0",
   "type": "module",
-  "engines": { "node": "22.x" },
+  "engines": { "node": "20.x" },
   "dependencies": {
-    "@sparticuz/chromium": "^131.0.0",
-    "puppeteer-core": "24.10.2",
+    "@sparticuz/chromium": "^119.0.2",
+    "puppeteer-core": "^21.6.1",
     "exceljs": "^4.4.0"
-  },
-  "devDependencies": {
-    "puppeteer": "24.10.2"
   }
 }
