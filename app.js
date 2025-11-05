@@ -33,7 +33,7 @@ class VFRFlightPlanner {
                 momentUnit: 'kg·m',
                 arms: [1, 1.155, 2.035, 1.075, 2.6],
                 armUnit: 'm',
-                envelope: [[600, 500], [1280, 1060], [1100, 1060], [910, 980], [500, 550]],
+                envelope: [[600,500],[920,980],[1250,1155],[1380,1555],[500,550]],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
                 fuelConversion: 0.72,
                 landingGearMoment: 0,
@@ -41,14 +41,14 @@ class VFRFlightPlanner {
             },
             'PA28': {
                 name: 'PA28',
-                emptyWeight: 1828.44,
+                emptyWeight: 1824.44,
                 unit: 'lbs',
                 momentUnit: 'lbs·in',
                 arms: [89.48, 80.5, 118.1, 95, 142.9],
                 armUnit: 'in',
-                envelope: [[85.5, 1400], [85.5, 2250], [90, 2780], [93, 2780], [93, 1400]],
-                categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas gallons]", "Luggage rack"],
-                fuelConversion: 6.0,
+                envelope: [[85.5,1400],[85.5,2250],[90,2780],[93,2780],[93,1400]],
+                categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
+                fuelConversion: 1.59,
                 landingGearMoment: 819,
                 momentDivisor: 1
             },
@@ -56,14 +56,14 @@ class VFRFlightPlanner {
                 name: 'P68B',
                 emptyWeight: 2957.57,
                 unit: 'lbs',
-                momentUnit: 'lbs·in/100',
+                momentUnit: 'lbs·in',
                 arms: [16.492, -37.4, -5.7, 34.2, 30.3, 60.7],
                 armUnit: 'in',
-                envelope: [[10.2, 2650], [10.2, 3550], [12.8, 4350], [20.6, 4350], [20.6, 2650]],
-                categories: ["AC Empty Weight", "Pilot+Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [AvGas gallons]", "Baggage"],
-                fuelConversion: 6.0,
+                envelope: [[10.2,2650],[10.2,3550],[12.8,4350],[20.6,4350],[20.6,2650]],
+                categories: ["AC Empty Weight", "Pilot+Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [AvGas liters]", "Baggage"],
+                fuelConversion: 1.59,
                 landingGearMoment: 0,
-                momentDivisor: 100
+                momentDivisor: 1
             }
         };
 
@@ -82,6 +82,7 @@ class VFRFlightPlanner {
         this.weightBalanceData.weights[0] = this.aircraftConfigs['TB9'].emptyWeight;
         this.weightBalanceData.moments[0] = (this.aircraftConfigs['TB9'].emptyWeight * this.aircraftConfigs['TB9'].arms[0]) / this.aircraftConfigs['TB9'].momentDivisor;
 
+        this.customMode = false;
         this.constants = {
             earthRadius: 6371,
             nauticalMileKm: 1.852,
@@ -204,12 +205,12 @@ class VFRFlightPlanner {
                            class="form-control weight-input aviation-input" 
                            data-index="${index}"
                            value="${weight.toFixed(2)}"
-                           ${isTotal || isEmptyWeight ? 'readonly' : ''}
+                           ${isTotal ? 'readonly' : ''}
                            step="0.1"
                            min="0"
                            placeholder="0.00">
                 </td>
-                <td class="arm-value">${arm.toFixed(3)}</td>
+                <td class="arm-value">${ this.customMode ? `<input type=\"number\" class=\"form-control aviation-input\" data-arm-index=\"${index}\" value=\"${arm.toFixed(3)}\" step=\"0.001\" />` : arm.toFixed(3) }</td>
                 <td class="moment-value">${moment.toFixed(2)}</td>
             `;
 
@@ -600,6 +601,33 @@ class VFRFlightPlanner {
                 console.log('Aircraft changed to:', e.target.value);
                 this.changeAircraft(e.target.value);
             });
+
+        // Custom Mode toggle - allows editing arms and envelope points
+        const customCheckbox = document.getElementById('customMode');
+        if (customCheckbox) {
+            customCheckbox.addEventListener('change', (ev) => {
+                this.customMode = ev.target.checked;
+                // When custom mode toggled, re-render table to allow arm editing
+                this.updateWeightBalanceTable();
+            });
+        }
+
+        // Listen for arm edits (delegated)
+        document.addEventListener('input', (ev) => {
+            if (!this.customMode) return;
+            const target = ev.target;
+            if (target && target.dataset && target.dataset.armIndex) {
+                const idx = parseInt(target.dataset.armIndex);
+                const val = parseFloat(target.value) || 0;
+                // update current aircraft arms
+                this.aircraftConfigs[this.currentAircraft].arms[idx] = val;
+                // recalc moments
+                this.recalculateMomentsFromWeights();
+                this.updateWeightBalanceDisplay();
+                this.updateWeightBalanceChart();
+            }
+        });
+
         }
     
     }
