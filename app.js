@@ -12,7 +12,8 @@ class VFRFlightPlanner {
         };
 
         // Aircraft configurations
-        this.aircraftConfigs = {
+        
+this.aircraftConfigs = {
             'TB9': {
                 name: 'TB9 (Default)',
                 emptyWeight: 617.97,
@@ -47,7 +48,7 @@ class VFRFlightPlanner {
                 arms: [89.48, 80.5, 118.1, 95, 142.9],
                 armUnit: 'in',
                 envelope: [[85.5,1400],[85.5,2250],[90,2780],[93,2780],[93,1400]],
-                categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
+                categories: ["AC Empty Weight", "Front seats", "Rear seats", "Fuel on Board [AvGas liters]", "Baggage"],
                 fuelConversion: 1.59,
                 landingGearMoment: 819,
                 momentDivisor: 1
@@ -60,104 +61,13 @@ class VFRFlightPlanner {
                 arms: [16.492, -37.4, -5.7, 34.2, 30.3, 60.7],
                 armUnit: 'in',
                 envelope: [[10.2,2650],[10.2,3550],[12.8,4350],[20.6,4350],[20.6,2650]],
-                categories: ["AC Empty Weight", "Pilot+Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [AvGas liters]", "Baggage"],
+                categories: ["AC Empty Weight", "Pilot+Copilot", "Pax Row1", "Pax Row2", "Fuel [liters]", "Baggage"],
                 fuelConversion: 1.59,
                 landingGearMoment: 0,
                 momentDivisor: 1
             }
         };
-
-        this.currentAircraft = 'TB9';
-
-        this.weightBalanceData = {
-            envelope: this.aircraftConfigs['TB9'].envelope,
-            arms: this.aircraftConfigs['TB9'].arms,
-            categories: [...this.aircraftConfigs['TB9'].categories, "Total"],
-            weights: new Array(this.aircraftConfigs['TB9'].categories.length + 1).fill(0),
-            moments: new Array(this.aircraftConfigs['TB9'].categories.length + 1).fill(0),
-            chart: null
-        };
-
-        // Set initial empty weight
-        this.weightBalanceData.weights[0] = this.aircraftConfigs['TB9'].emptyWeight;
-        this.weightBalanceData.moments[0] = (this.aircraftConfigs['TB9'].emptyWeight * this.aircraftConfigs['TB9'].arms[0]) / this.aircraftConfigs['TB9'].momentDivisor;
-
-        this.customMode = false;
-        this.constants = {
-            earthRadius: 6371,
-            nauticalMileKm: 1.852,
-            metersToFeet: 3.28084,
-            baseAltitude: 1500
-        };
-
-        // Per salvare il blob Excel e HTML generato
-        this.lastExcelBlob = null;
-        this.lastGeneratedHTML = null;
-
-        this.init();
-    }
-
-    init() {
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                this.setupApplication();
-            });
-        } else {
-            this.setupApplication();
-        }
-    }
-
-    setupApplication() {
-        this.bindEvents();
-        this.initializeWeightBalanceTable();
-        this.addWaypointInputs(); // Initialize with default waypoints
-
-        // Initialize Weight & Balance chart when that tab is first shown
-        const wbTab = document.getElementById('wb-tab');
-        if (wbTab) {
-            wbTab.addEventListener('click', () => {
-                setTimeout(() => {
-                    if (!this.weightBalanceData.chart) {
-                        this.initializeWeightBalanceChart();
-                    }
-                }, 100);
-            });
-        }
-    }
-
-
-
-    // ===== WEIGHT AND BALANCE FUNCTIONS =====
-
-    changeAircraft(aircraftType) {
-        if (!this.aircraftConfigs[aircraftType]) {
-            console.error('Aircraft type not found:', aircraftType);
-            return;
-        }
-
-        this.currentAircraft = aircraftType;
-        const config = this.aircraftConfigs[aircraftType];
-
-        // Update weight balance data structure
-        this.weightBalanceData.envelope = config.envelope;
-        this.weightBalanceData.arms = config.arms;
-        this.weightBalanceData.categories = [...config.categories, "Total"];
-
-        // Reset arrays
-        const numCategories = config.categories.length + 1;
-        this.weightBalanceData.weights = new Array(numCategories).fill(0);
-        this.weightBalanceData.moments = new Array(numCategories).fill(0);
-
-        // Set empty weight
-        this.weightBalanceData.weights[0] = config.emptyWeight;
-        this.weightBalanceData.moments[0] = (config.emptyWeight * config.arms[0] + config.landingGearMoment) / config.momentDivisor;
-
-        // Calculate initial totals
-        this.calculateWeightBalanceTotals();
-
-        // Update UI
-        this.updateWeightBalanceHeaders();
+this.updateWeightBalanceHeaders();
         this.updateWeightBalanceTable();
 
         // Update chart - IMPORTANTE: forza il refresh del grafico
@@ -205,12 +115,12 @@ class VFRFlightPlanner {
                            class="form-control weight-input aviation-input" 
                            data-index="${index}"
                            value="${weight.toFixed(2)}"
-                           ${isTotal ? 'readonly' : ''}
+                           ${isTotal || isEmptyWeight ? 'readonly' : ''}
                            step="0.1"
                            min="0"
                            placeholder="0.00">
                 </td>
-                <td class="arm-value">${ this.customMode ? `<input type=\"number\" class=\"form-control aviation-input\" data-arm-index=\"${index}\" value=\"${arm.toFixed(3)}\" step=\"0.001\" />` : arm.toFixed(3) }</td>
+                <td class="arm-value">${arm.toFixed(3)}</td>
                 <td class="moment-value">${moment.toFixed(2)}</td>
             `;
 
@@ -264,6 +174,7 @@ class VFRFlightPlanner {
         this.updateWeightBalanceChart();
     }
 
+    
     calculateWeightBalanceTotals() {
         const config = this.aircraftConfigs[this.currentAircraft];
         const totalIndex = this.weightBalanceData.categories.length - 1;
@@ -283,8 +194,15 @@ class VFRFlightPlanner {
             totalMoment += this.weightBalanceData.moments[i] || 0;
         }
 
+        // Add any fixed landing gear moment if present (e.g., PA28)
+        if (config.landingGearMoment && typeof config.landingGearMoment === 'number') {
+            totalMoment += config.landingGearMoment;
+        }
+
         this.weightBalanceData.weights[totalIndex] = totalWeight;
         this.weightBalanceData.moments[totalIndex] = totalMoment;
+    }
+
     }
 
     updateWeightBalanceDisplay() {
@@ -601,33 +519,6 @@ class VFRFlightPlanner {
                 console.log('Aircraft changed to:', e.target.value);
                 this.changeAircraft(e.target.value);
             });
-
-        // Custom Mode toggle - allows editing arms and envelope points
-        const customCheckbox = document.getElementById('customMode');
-        if (customCheckbox) {
-            customCheckbox.addEventListener('change', (ev) => {
-                this.customMode = ev.target.checked;
-                // When custom mode toggled, re-render table to allow arm editing
-                this.updateWeightBalanceTable();
-            });
-        }
-
-        // Listen for arm edits (delegated)
-        document.addEventListener('input', (ev) => {
-            if (!this.customMode) return;
-            const target = ev.target;
-            if (target && target.dataset && target.dataset.armIndex) {
-                const idx = parseInt(target.dataset.armIndex);
-                const val = parseFloat(target.value) || 0;
-                // update current aircraft arms
-                this.aircraftConfigs[this.currentAircraft].arms[idx] = val;
-                // recalc moments
-                this.recalculateMomentsFromWeights();
-                this.updateWeightBalanceDisplay();
-                this.updateWeightBalanceChart();
-            }
-        });
-
         }
     
     }
