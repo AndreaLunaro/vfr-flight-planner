@@ -1529,3 +1529,25 @@ this.updateWeightBalanceHeaders();
 document.addEventListener('DOMContentLoaded', () => {
     window.flightPlanner = new VFRFlightPlanner();
 });
+
+
+// Safety initializer: ensure Weight & Balance UI is initialized after DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        if (window.flightPlanner) {
+            const fp = window.flightPlanner;
+            // ensure currentAircraft set
+            if (!fp.currentAircraft) fp.currentAircraft = 'TB9';
+            // force update headers and table
+            if (typeof fp.updateWeightBalanceHeaders === 'function') fp.updateWeightBalanceHeaders();
+            if (typeof fp.updateWeightBalanceTable === 'function') fp.updateWeightBalanceTable();
+            if (typeof fp.initializeWeightBalanceChart === 'function' && !fp.weightBalanceData.chart) {
+                fp.initializeWeightBalanceChart();
+            } else if (typeof fp.updateWeightBalanceChart === 'function') {
+                fp.updateWeightBalanceChart();
+            }
+        }
+    } catch (err) {
+        console.error('W&B initialization safety error:', err);
+    }
+});
