@@ -182,6 +182,7 @@ class VFRFlightPlanner {
             aircraftSelect.addEventListener('change', (e) => {
                 this.loadAircraftData(e.target.value);
                 this.initializeWeightBalanceTable();
+                this.resetWeightBalance();
                 if (this.weightBalanceData.chart) {
                     this.updateWeightBalanceLabels();
                 }
@@ -1121,10 +1122,27 @@ class VFRFlightPlanner {
             document.getElementById('totalMoment').textContent = totalMoment.toFixed(2);
 
             if (this.weightBalanceData.chart) {
-                this.weightBalanceData.chart.data.datasets[1].data = [{
-                    x: totalMoment,
-                    y: totalWeight
-                }];
+                // For P68B and PA28: plot Mass vs Arm (x=arm, y=weight)
+                // For TB9 and TB10: plot Mass vs Moment (x=moment, y=weight)
+                const aircraft = this.aircraftDatabase[this.currentAircraft];
+                let chartPoint = {};
+
+                if (aircraft.name === 'P68B' || aircraft.name === 'PA28') {
+                    // Plot: x = final arm (CG), y = weight
+                    const finalArm = totalWeight > 0 ? totalMoment / totalWeight : 0;
+                    chartPoint = {
+                        x: finalArm,
+                        y: totalWeight
+                    };
+                } else {
+                    // TB9, TB10: plot x = moment, y = weight (original)
+                    chartPoint = {
+                        x: totalMoment,
+                        y: totalWeight
+                    };
+                }
+
+                this.weightBalanceData.chart.data.datasets[1].data = [chartPoint];
                 this.weightBalanceData.chart.update();
             }
 
