@@ -28,7 +28,7 @@ class VFRFlightPlanner {
             },
             'TB10': {
                 name: 'TB10',
-                envelope: [[600,500], [920,980], [1250,1155], [1380,1555], [500,550]],
+                envelope: [[600,500], [1280,1060], [1100,1060], [910,980], [500,550]],
                 emptyWeight: 727.37,
                 arms: [1, 1.155, 2.035, 1.075, 2.6],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
@@ -55,7 +55,7 @@ class VFRFlightPlanner {
                 envelope: [[10.2,2650], [10.2,3550], [12.8,4350], [20.6,4350], [20.6,2650]],
                 emptyWeight: 2957.57,
                 arms: [16.492, -37.4, -5.7, 34.2, 30.3, 60.7],
-                categories: ["AC Empty Weight", "Pilot", "Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [liters]", "Luggage"],
+                categories: ["AC Empty Weight", "Pilot+Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [liters]", "Luggage"],
                 units: 'imperial',
                 xLabel: 'Momentum [lbs x inch]',
                 yLabel: 'Mass [lbs]',
@@ -1146,9 +1146,23 @@ class VFRFlightPlanner {
                 this.weightBalanceData.chart.update();
             }
 
+            // Determine which coordinates to use for polygon check
+            let checkX, checkY;
+            const aircraft = this.aircraftDatabase[this.currentAircraft];
+
+            if (aircraft.name === 'P68B' || aircraft.name === 'PA28') {
+                // For imperial units: use finalArm (CG) and totalWeight
+                checkX = totalWeight > 0 ? totalMoment / totalWeight : 0;
+                checkY = totalWeight;
+            } else {
+                // For metric units: use totalMoment and totalWeight
+                checkX = totalMoment;
+                checkY = totalWeight;
+            }
+
             const isWithinLimits = this.isPointInsidePolygon(
-                totalMoment, 
-                totalWeight, 
+                checkX, 
+                checkY, 
                 this.weightBalanceData.envelope
             );
 
