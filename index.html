@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VFR Flight Planner</title>
+    <title>VFR Flight Planner - FINALE OTTIMIZZATO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="style.css" rel="stylesheet">
 </head>
 <body>
     <div class="container-fluid py-4">
-        <header class="mb-4">
-            <h1 class="text-center aviation-header">VFR Flight Planner</h1>
-        </header>
+        <h1 class="aviation-header mb-4 text-center">VFR Flight Planner</h1>
 
-        <!-- Tab Navigation -->
-        <ul class="nav nav-tabs aviation-tabs mb-4" id="mainTabs" role="tablist">
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="flight-tab" data-bs-toggle="tab" data-bs-target="#flight-planning" type="button" role="tab" aria-controls="flight-planning" aria-selected="true">
                     Flight Planning
@@ -41,32 +39,48 @@
                             <div class="card-body">
                                 <div class="form-group mb-3">
                                     <label for="flightSpeed" class="form-label aviation-label">Flight Speed (kts)</label>
-                                    <input type="number" class="form-control aviation-input" id="flightSpeed" value="90" min="1" step="1">
+                                    <input type="number" class="form-control aviation-input" id="flightSpeed" value="90" min="50" max="300" step="5">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label for="fuelConsumption" class="form-label aviation-label">Liter per Hour</label>
-                                    <input type="number" class="form-control aviation-input" id="fuelConsumption" value="30" min="1" step="1">
+                                    <label for="fuelConsumption" class="form-label aviation-label">Fuel Consumption (L/h)</label>
+                                    <input type="number" class="form-control aviation-input" id="fuelConsumption" value="30" min="10" max="100" step="1">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label for="numWaypoints" class="form-label aviation-label">Number of Waypoints</label>
-                                    <input type="number" class="form-control aviation-input" id="numWaypoints" value="2" min="2" max="20" step="1">
+                                    <label for="numWaypoints" class="form-label aviation-label">Number of Waypoints (2-15)</label>
+                                    <input type="number" class="form-control aviation-input" id="numWaypoints" value="2" min="2" max="15">
                                 </div>
-                                <button type="button" class="btn aviation-btn-primary mb-3" id="addWaypoints">Add Waypoints</button>
+                                <button type="button" class="btn aviation-btn-primary w-100 mb-3" id="addWaypoints">Generate Waypoints</button>
 
-                                <div id="waypointInputs"></div>
+                                <div id="waypointInputs" class="mb-3"></div>
 
-                                <div class="d-grid gap-2 mt-3">
-                                    <button type="button" class="btn aviation-btn-primary" id="calculateFlight">Calculate Flight Data</button>
-                                    <button type="button" class="btn aviation-btn-secondary" id="resetPlan">Reset Plan</button>
-                                    <button type="button" class="btn aviation-btn-outline" id="exportPlan" disabled>Export Plan</button>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="includeAlternate">
+                                    <label class="form-check-label aviation-label" for="includeAlternate">
+                                        Include Alternate Airport
+                                    </label>
+                                </div>
+
+                                <div id="alternateSection" style="display: none;">
+                                    <div class="form-group mb-3">
+                                        <label for="numAlternateWaypoints" class="form-label aviation-label">Alternate Waypoints (2-10)</label>
+                                        <input type="number" class="form-control aviation-input" id="numAlternateWaypoints" value="2" min="2" max="10">
+                                    </div>
+                                    <button type="button" class="btn aviation-btn-secondary w-100 mb-3" id="addAlternateWaypoints">Generate Alternate Waypoints</button>
+                                    <div id="alternateInputs" class="mb-3"></div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn aviation-btn-primary" id="calculateFlight">Calculate Flight</button>
+                                    <button type="button" class="btn aviation-btn-outline" id="resetPlan">Reset Plan</button>
+                                    <button type="button" class="btn aviation-btn-success" id="exportPlan" disabled>Export to Excel</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Center Column - Results -->
-                    <div class="col-md-4">
-                        <div class="card aviation-card">
+                    <!-- Right Column - Results -->
+                    <div class="col-md-8">
+                        <div class="card aviation-card mb-3">
                             <div class="card-header aviation-card-header">
                                 <h5>Trip Principale</h5>
                             </div>
@@ -88,48 +102,34 @@
                                     </table>
                                 </div>
 
-                                <div class="fuel-summary aviation-fuel-summary mt-3">
-                                    <div class="row mb-2">
+                                <div class="aviation-fuel-summary mt-3">
+                                    <div class="row">
                                         <div class="col-6"><strong>Trip Fuel:</strong></div>
-                                        <div class="col-6 aviation-fuel-value" id="tripFuel">-- litri</div>
+                                        <div class="col-6 text-end"><span class="aviation-fuel-value" id="tripFuel">-- litri</span></div>
                                     </div>
-                                    <div class="row mb-2">
+                                    <div class="row">
                                         <div class="col-6"><strong>Contingency Fuel:</strong></div>
-                                        <div class="col-6 aviation-fuel-value" id="contingencyFuel">-- litri</div>
+                                        <div class="col-6 text-end"><span class="aviation-fuel-value" id="contingencyFuel">-- litri</span></div>
                                     </div>
-                                    <div class="row mb-2">
+                                    <div class="row">
                                         <div class="col-6"><strong>Reserve Fuel:</strong></div>
-                                        <div class="col-6 aviation-fuel-value" id="reserveFuel">-- litri</div>
+                                        <div class="col-6 text-end"><span class="aviation-fuel-value" id="reserveFuel">-- litri</span></div>
                                     </div>
-                                    <div class="row mb-2">
+                                    <hr>
+                                    <div class="row">
                                         <div class="col-6"><strong>Total Fuel:</strong></div>
-                                        <div class="col-6 aviation-fuel-value aviation-total-fuel" id="totalFuel">-- litri</div>
+                                        <div class="col-6 text-end"><span class="aviation-total-fuel" id="totalFuel">-- litri</span></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Right Column - Alternate -->
-                    <div class="col-md-4">
-                        <div class="card aviation-card">
-                            <div class="card-header aviation-card-header d-flex justify-content-between align-items-center">
+                        <div class="card aviation-card" id="alternateCard" style="display: none;">
+                            <div class="card-header aviation-card-header">
                                 <h5>Aeroporto Alternato</h5>
-                                <div class="form-check">
-                                    <input class="form-check-input aviation-checkbox" type="checkbox" id="includeAlternate">
-                                    <label class="form-check-label aviation-label" for="includeAlternate">Include Alternate</label>
-                                </div>
                             </div>
-                            <div class="card-body" id="alternateSection" style="display: none;">
-                                <div class="form-group mb-3">
-                                    <label for="numAlternateWaypoints" class="form-label aviation-label">Number of Alternate Waypoints</label>
-                                    <input type="number" class="form-control aviation-input" id="numAlternateWaypoints" value="2" min="2" max="10" step="1">
-                                </div>
-                                <button type="button" class="btn aviation-btn-secondary mb-3" id="addAlternateWaypoints">Add Alternate Waypoints</button>
-
-                                <div id="alternateInputs"></div>
-
-                                <div class="table-responsive mt-3">
+                            <div class="card-body">
+                                <div class="table-responsive">
                                     <table class="table aviation-table" id="alternateTable">
                                         <thead>
                                             <tr>
@@ -146,10 +146,10 @@
                                     </table>
                                 </div>
 
-                                <div class="alternate-fuel-summary aviation-fuel-summary mt-3">
-                                    <div class="row mb-2">
-                                        <div class="col-6"><strong>Alternate Fuel:</strong></div>
-                                        <div class="col-6 aviation-fuel-value" id="alternateFuel">-- litri</div>
+                                <div class="aviation-fuel-summary mt-3">
+                                    <div class="row">
+                                        <div class="col-6"><strong>Alternate Trip Fuel:</strong></div>
+                                        <div class="col-6 text-end"><span class="aviation-fuel-value" id="alternateTripFuel">-- litri</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -160,6 +160,38 @@
 
             <!-- Weight and Balance Tab -->
             <div class="tab-pane fade" id="weight-balance" role="tabpanel" aria-labelledby="wb-tab" tabindex="0">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card aviation-card">
+                            <div class="card-header aviation-card-header">
+                                <h5>Aircraft Selection</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="aircraftSelect" class="form-label aviation-label">Select Aircraft:</label>
+                                        <select class="form-control aviation-input" id="aircraftSelect">
+                                            <option value="TB9">TB9</option>
+                                            <option value="TB10">TB10</option>
+                                            <option value="PA28">PA28</option>
+                                            <option value="P68B">P68B</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label aviation-label">&nbsp;</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="customModeCheckbox">
+                                            <label class="form-check-label aviation-label" for="customModeCheckbox">
+                                                Enable Custom Mode (Edit Graph & Arms)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card aviation-card">
@@ -172,10 +204,7 @@
                                 </div>
                                 <div class="mt-3">
                                     <button type="button" class="btn aviation-btn-secondary" id="updateWBRange">Update W&B Range</button>
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
-                                        <div id="wbStatus" class="wb-status"></div>
-                                        <div id="cgPosition" class="text-muted small"></div>
-                                    </div>
+                                    <div id="wbStatus" class="mt-2"></div>
                                 </div>
                             </div>
                         </div>
@@ -186,24 +215,13 @@
                                 <h5>Weight and Balance Data</h5>
                             </div>
                             <div class="card-body">
-                                <!-- Aircraft Selection -->
-                                <div class="mb-3">
-                                    <label for="aircraftSelect" class="form-label aviation-label">Select Aircraft:</label>
-                                    <select class="form-select" id="aircraftSelect">
-                                        <option value="TB9" selected>TB9 (Default)</option>
-                                        <option value="TB10">TB10</option>
-                                        <option value="PA28">PA28</option>
-                                        <option value="P68B">P68B</option>
-                                    </select>
-                                </div>
-
                                 <table class="table aviation-table" id="wbTable">
                                     <thead>
                                         <tr>
                                             <th>Item</th>
                                             <th id="wbWeightHeader">Weight[kg]</th>
                                             <th id="wbArmHeader">Arm[m]</th>
-                                            <th id="wbMomentHeader">Moment</th>
+                                            <th>Moment</th>
                                         </tr>
                                     </thead>
                                     <tbody id="wbTableBody">
@@ -243,12 +261,32 @@
                         <button type="button" class="btn-close aviation-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="aviation-text">Inserisci i 5 punti dell'envelope (peso, momento):</p>
+                        <p class="aviation-text">Inserisci i punti dell'envelope (X: momento, Y: peso):</p>
                         <div id="wbRangeInputs"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn aviation-btn-secondary" data-bs-dismiss="modal">Annulla</button>
                         <button type="button" class="btn aviation-btn-primary" id="saveWBRange">Salva</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Arms Modal -->
+        <div class="modal fade" id="customArmsModal" tabindex="-1" aria-labelledby="customArmsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content aviation-modal">
+                    <div class="modal-header aviation-modal-header">
+                        <h5 class="modal-title" id="customArmsModalLabel">Edit Arms Values</h5>
+                        <button type="button" class="btn-close aviation-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="aviation-text">Modifica i valori dei bracci:</p>
+                        <div id="customArmsInputs"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn aviation-btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn aviation-btn-primary" id="saveCustomArms">Salva</button>
                     </div>
                 </div>
             </div>

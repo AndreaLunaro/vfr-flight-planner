@@ -1,5 +1,6 @@
-// VFR Flight Planner JavaScript Application - FINALE OTTIMIZZATO A4 v2.7.0
-// Final optimized for single A4 landscape page with compact flight tables + larger bottom tables
+// VFR Flight Planner JavaScript Application - Multi-Aircraft Support v3.0.0
+// Updated with TB9, TB10, PA28, P68B aircraft support + Custom Mode
+
 class VFRFlightPlanner {
     constructor() {
         this.flightData = {
@@ -11,267 +12,290 @@ class VFRFlightPlanner {
             alternateFuelData: {}
         };
 
-        // Aircraft configurations
-        
-this.aircraftConfigs = {
+        // Aircraft database with all specifications
+        this.aircraftDatabase = {
             'TB9': {
-                name: 'TB9 (Default)',
-                emptyWeight: 617.97,
-                unit: 'kg',
-                momentUnit: 'kg·m',
+                name: 'TB9',
+                envelope: [[600,500], [1280,1060], [1100,1060], [910,980], [500,550]],
+                emptyWeight: 0,
                 arms: [1.006, 1.155, 2.035, 1.075, 2.6],
-                armUnit: 'm',
-                envelope: [[600, 500], [1280, 1060], [1100, 1060], [910, 980], [500, 550]],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
+                units: 'metric',
+                xLabel: 'Momentum [kg x m]',
+                yLabel: 'Mass [kg]',
                 fuelConversion: 0.72,
-                landingGearMoment: 0,
-                momentDivisor: 1
+                landingGearMoment: 0
             },
             'TB10': {
                 name: 'TB10',
+                envelope: [[600,500], [920,980], [1250,1155], [1380,1555], [500,550]],
                 emptyWeight: 727.37,
-                unit: 'kg',
-                momentUnit: 'kg·m',
                 arms: [1, 1.155, 2.035, 1.075, 2.6],
-                armUnit: 'm',
-                envelope: [[600,500],[920,980],[1250,1155],[1380,1555],[500,550]],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [AvGas liters]", "Luggage rack"],
+                units: 'metric',
+                xLabel: 'Momentum [kg x m]',
+                yLabel: 'Mass [kg]',
                 fuelConversion: 0.72,
-                landingGearMoment: 0,
-                momentDivisor: 1
+                landingGearMoment: 0
             },
             'PA28': {
                 name: 'PA28',
+                envelope: [[85.5, 1400], [85.5, 2250], [90, 2780], [93, 2780], [93, 1400]],
                 emptyWeight: 1824.44,
-                unit: 'lbs',
-                momentUnit: 'lbs·in',
                 arms: [89.48, 80.5, 118.1, 95, 142.9],
-                armUnit: 'in',
-                envelope: [[85.5,1400],[85.5,2250],[90,2780],[93,2780],[93,1400]],
-                categories: ["AC Empty Weight", "Front seats", "Rear seats", "Fuel on Board [AvGas liters]", "Baggage"],
+                categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [liters]", "Luggage rack"],
+                units: 'imperial',
+                xLabel: 'Momentum [lbs x inch]',
+                yLabel: 'Mass [lbs]',
                 fuelConversion: 1.59,
-                landingGearMoment: 819,
-                momentDivisor: 1
+                landingGearMoment: 819
             },
             'P68B': {
                 name: 'P68B',
+                envelope: [[10.2, 2650], [10.2, 3550], [12.8, 4350], [20.6, 4350], [20.6, 2650]],
                 emptyWeight: 2957.57,
-                unit: 'lbs',
-                momentUnit: 'lbs·in',
                 arms: [16.492, -37.4, -5.7, 34.2, 30.3, 60.7],
-                armUnit: 'in',
-                envelope: [[10.2,2650],[10.2,3550],[12.8,4350],[20.6,4350],[20.6,2650]],
-                categories: ["AC Empty Weight", "Pilot+Copilot", "Pax Row1", "Pax Row2", "Fuel [liters]", "Baggage"],
+                categories: ["AC Empty Weight", "Pilot", "Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [liters]", "Luggage"],
+                units: 'imperial',
+                xLabel: 'Momentum [lbs x inch]',
+                yLabel: 'Mass [lbs]',
                 fuelConversion: 1.59,
-                landingGearMoment: 0,
-                momentDivisor: 1
+                landingGearMoment: 0
             }
         };
-this.updateWeightBalanceHeaders();
-        this.updateWeightBalanceTable();
 
-        // Update chart - IMPORTANTE: forza il refresh del grafico
-        if (this.weightBalanceData.chart) {
-            this.updateWeightBalanceChart();
-        }
+        // Current aircraft selection
+        this.currentAircraft = 'TB9';
+        this.customModeEnabled = false;
 
-        console.log(`Aircraft changed to: ${config.name}`);
+        // Weight and Balance data (will be populated from selected aircraft)
+        this.weightBalanceData = {
+            envelope: [],
+            arms: [],
+            categories: [],
+            weights: [],
+            moments: [],
+            chart: null
+        };
+
+        this.constants = {
+            earthRadius: 6371,
+            nauticalMileKm: 1.852,
+            metersToFeet: 3.28084,
+            baseAltitude: 1500
+        };
+
+        // For Excel and HTML export
+        this.lastExcelBlob = null;
+        this.lastGeneratedHTML = null;
+
+        this.init();
     }
 
-    updateWeightBalanceHeaders() {
-        const config = this.aircraftConfigs[this.currentAircraft];
+    init() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.setupApplication();
+            });
+        } else {
+            this.setupApplication();
+        }
+    }
 
+    setupApplication() {
+        this.bindEvents();
+        this.loadAircraftData(this.currentAircraft);
+        this.initializeWeightBalanceTable();
+        this.addWaypointInputs();
+
+        // Initialize Weight & Balance chart when that tab is first shown
+        const wbTab = document.getElementById('wb-tab');
+        if (wbTab) {
+            wbTab.addEventListener('click', () => {
+                setTimeout(() => {
+                    if (!this.weightBalanceData.chart) {
+                        this.initializeWeightBalanceChart();
+                    }
+                }, 100);
+            });
+        }
+    }
+
+    // Load aircraft data into current weight balance data
+    loadAircraftData(aircraftCode) {
+        const aircraft = this.aircraftDatabase[aircraftCode];
+        if (!aircraft) {
+            console.error('Aircraft not found:', aircraftCode);
+            return;
+        }
+
+        this.currentAircraft = aircraftCode;
+        this.weightBalanceData.envelope = JSON.parse(JSON.stringify(aircraft.envelope));
+        this.weightBalanceData.arms = [...aircraft.arms];
+        this.weightBalanceData.categories = [...aircraft.categories];
+
+        // Initialize weights and moments arrays
+        const totalCategories = aircraft.categories.length + 1; // +1 for Total row
+        this.weightBalanceData.weights = new Array(totalCategories).fill(0);
+        this.weightBalanceData.moments = new Array(totalCategories).fill(0);
+
+        // Set empty weight if defined
+        if (aircraft.emptyWeight > 0) {
+            this.weightBalanceData.weights[0] = aircraft.emptyWeight;
+        }
+
+        // Update UI labels based on units
+        this.updateWeightBalanceLabels();
+    }
+
+    updateWeightBalanceLabels() {
+        const aircraft = this.aircraftDatabase[this.currentAircraft];
         const weightHeader = document.getElementById('wbWeightHeader');
         const armHeader = document.getElementById('wbArmHeader');
-        const momentHeader = document.getElementById('wbMomentHeader');
 
-        if (weightHeader) weightHeader.textContent = `Weight[${config.unit}]`;
-        if (armHeader) armHeader.textContent = `Arm[${config.armUnit}]`;
-        if (momentHeader) momentHeader.textContent = `Moment[${config.momentUnit}]`;
-    }
-
-    updateWeightBalanceTable() {
-        const tbody = document.getElementById('wbTableBody');
-        if (!tbody) return;
-
-        const config = this.aircraftConfigs[this.currentAircraft];
-        tbody.innerHTML = '';
-
-        this.weightBalanceData.categories.forEach((category, index) => {
-            const row = document.createElement('tr');
-            const isTotal = index === this.weightBalanceData.categories.length - 1;
-            const isEmptyWeight = index === 0;
-
-            if (isTotal) row.className = 'total-row';
-
-            const weight = this.weightBalanceData.weights[index] || 0;
-            const moment = this.weightBalanceData.moments[index] || 0;
-            const arm = index < config.arms.length ? config.arms[index] : 0;
-
-            row.innerHTML = `
-                <td class="category-name">${category}</td>
-                <td>
-                    <input type="number" 
-                           class="form-control weight-input aviation-input" 
-                           data-index="${index}"
-                           value="${weight.toFixed(2)}"
-                           ${isTotal || isEmptyWeight ? 'readonly' : ''}
-                           step="0.1"
-                           min="0"
-                           placeholder="0.00">
-                </td>
-                <td class="arm-value">${arm.toFixed(3)}</td>
-                <td class="moment-value">${moment.toFixed(2)}</td>
-            `;
-
-            tbody.appendChild(row);
-
-            // Add event listener for editable inputs
-            if (!isTotal && !isEmptyWeight) {
-                const input = row.querySelector('.weight-input');
-                if (input) {
-                    input.addEventListener('input', (e) => {
-                        const value = parseFloat(e.target.value) || 0;
-                        this.updateWeightBalanceCalculation(index, value);
-                    });
-
-                    input.addEventListener('change', (e) => {
-                        const value = parseFloat(e.target.value) || 0;
-                        e.target.value = value.toFixed(2);
-                    });
-                }
-            }
-        });
-
-        // Update limits after table is created
-        this.updateWeightBalanceLimits();
-    }
-
-    updateWeightBalanceCalculation(index, weight) {
-        const config = this.aircraftConfigs[this.currentAircraft];
-
-        // Update weight
-        this.weightBalanceData.weights[index] = weight;
-
-        // Calculate moment
-        if (index < config.arms.length) {
-            const isFuel = config.categories[index] && config.categories[index].includes('Fuel');
-
-            if (isFuel) {
-                // Convert fuel to weight
-                const fuelWeight = weight * config.fuelConversion;
-                this.weightBalanceData.moments[index] = (fuelWeight * config.arms[index]) / config.momentDivisor;
+        if (weightHeader && armHeader) {
+            if (aircraft.units === 'metric') {
+                weightHeader.textContent = 'Weight[kg]';
+                armHeader.textContent = 'Arm[m]';
             } else {
-                this.weightBalanceData.moments[index] = (weight * config.arms[index]) / config.momentDivisor;
+                weightHeader.textContent = 'Weight[lbs]';
+                armHeader.textContent = 'Arm[inch]';
             }
         }
 
-        // Recalculate totals
-        this.calculateWeightBalanceTotals();
-
-        // Update display
-        this.updateWeightBalanceDisplay();
-        this.updateWeightBalanceChart();
+        // Update chart if it exists
+        if (this.weightBalanceData.chart) {
+            this.weightBalanceData.chart.options.scales.x.title.text = aircraft.xLabel;
+            this.weightBalanceData.chart.options.scales.y.title.text = aircraft.yLabel;
+            this.weightBalanceData.chart.data.datasets[0].data = this.weightBalanceData.envelope;
+            this.weightBalanceData.chart.update();
+        }
     }
 
-    
-    calculateWeightBalanceTotals() {
-        const config = this.aircraftConfigs[this.currentAircraft];
-        const totalIndex = this.weightBalanceData.categories.length - 1;
-
-        let totalWeight = 0;
-        let totalMoment = 0;
-
-        for (let i = 0; i < totalIndex; i++) {
-            if (i < config.categories.length) {
-                const isFuel = config.categories[i].includes('Fuel');
-                if (isFuel) {
-                    totalWeight += (this.weightBalanceData.weights[i] || 0) * config.fuelConversion;
-                } else {
-                    totalWeight += this.weightBalanceData.weights[i] || 0;
+    bindEvents() {
+        // Aircraft selection change
+        const aircraftSelect = document.getElementById('aircraftSelect');
+        if (aircraftSelect) {
+            aircraftSelect.addEventListener('change', (e) => {
+                this.loadAircraftData(e.target.value);
+                this.initializeWeightBalanceTable();
+                if (this.weightBalanceData.chart) {
+                    this.updateWeightBalanceLabels();
                 }
-            }
-            totalMoment += this.weightBalanceData.moments[i] || 0;
+            });
         }
 
-        // Add any fixed landing gear moment if present (e.g., PA28)
-        if (config.landingGearMoment && typeof config.landingGearMoment === 'number') {
-            totalMoment += config.landingGearMoment;
+        // Custom mode checkbox
+        const customModeCheckbox = document.getElementById('customModeCheckbox');
+        if (customModeCheckbox) {
+            customModeCheckbox.addEventListener('change', (e) => {
+                this.customModeEnabled = e.target.checked;
+                this.toggleCustomMode(e.target.checked);
+            });
         }
 
-        this.weightBalanceData.weights[totalIndex] = totalWeight;
-        this.weightBalanceData.moments[totalIndex] = totalMoment;
-    }
-
-    }
-
-    updateWeightBalanceDisplay() {
-        const tbody = document.getElementById('wbTableBody');
-        if (!tbody) return;
-
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach((row, index) => {
-            const momentCell = row.querySelector('.moment-value');
-            if (momentCell) {
-                momentCell.textContent = (this.weightBalanceData.moments[index] || 0).toFixed(2);
-            }
-
-            const weightInput = row.querySelector('.weight-input');
-            if (weightInput && weightInput.hasAttribute('readonly')) {
-                weightInput.value = (this.weightBalanceData.weights[index] || 0).toFixed(2);
-            }
-        });
-
-        this.updateWeightBalanceLimits();
-    }
-
-    updateWeightBalanceLimits() {
-        const config = this.aircraftConfigs[this.currentAircraft];
-        const totalIndex = this.weightBalanceData.categories.length - 1;
-        const totalWeight = this.weightBalanceData.weights[totalIndex] || 0;
-        const totalMoment = this.weightBalanceData.moments[totalIndex] || 0;
-
-        // Check envelope
-        const isWithinEnvelope = totalWeight > 0 ? this.isPointInPolygon(totalMoment, totalWeight, config.envelope) : true;
-
-        // Update status
-        const statusElement = document.getElementById('wbStatus');
-        if (statusElement) {
-            if (totalWeight === 0) {
-                statusElement.className = 'wb-status';
-                statusElement.textContent = 'Enter weights';
-            } else if (isWithinEnvelope) {
-                statusElement.className = 'wb-status wb-status-ok';
-                statusElement.textContent = '✓ Within Limits';
-            } else {
-                statusElement.className = 'wb-status wb-status-warning';
-                statusElement.textContent = '⚠ Outside Limits';
-            }
+        // Flight Planning Events
+        const addWaypointsBtn = document.getElementById('addWaypoints');
+        if (addWaypointsBtn) {
+            addWaypointsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.addWaypointInputs();
+            });
         }
 
-        // Update CG
-        const cgElement = document.getElementById('cgPosition');
-        if (cgElement && totalWeight > 0) {
-            const cg = (totalMoment * config.momentDivisor) / totalWeight;
-            cgElement.textContent = `CG: ${cg.toFixed(2)} ${config.armUnit}`;
-        } else if (cgElement) {
-            cgElement.textContent = '';
+        const addAlternateWaypointsBtn = document.getElementById('addAlternateWaypoints');
+        if (addAlternateWaypointsBtn) {
+            addAlternateWaypointsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.addAlternateWaypointInputs();
+            });
+        }
+
+        const calculateBtn = document.getElementById('calculateFlight');
+        if (calculateBtn) {
+            calculateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.calculateFlightData();
+            });
+        }
+
+        const resetBtn = document.getElementById('resetPlan');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.resetFlightPlan();
+            });
+        }
+
+        const exportBtn = document.getElementById('exportPlan');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.exportExcelAndPDF();
+            });
+        }
+
+        const alternateCheckbox = document.getElementById('includeAlternate');
+        if (alternateCheckbox) {
+            alternateCheckbox.addEventListener('change', (e) => {
+                this.toggleAlternateSection(e.target.checked);
+            });
+        }
+
+        // Weight & Balance Events
+        const calculateWBBtn = document.getElementById('calculateWB');
+        if (calculateWBBtn) {
+            calculateWBBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.calculateWeightBalance();
+            });
+        }
+
+        const resetWBBtn = document.getElementById('resetWB');
+        if (resetWBBtn) {
+            resetWBBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.resetWeightBalance();
+            });
+        }
+
+        const updateWBBtn = document.getElementById('updateWBRange');
+        if (updateWBBtn) {
+            updateWBBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showWBRangeModal();
+            });
+        }
+
+        const saveWBBtn = document.getElementById('saveWBRange');
+        if (saveWBBtn) {
+            saveWBBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveWBRange();
+            });
+        }
+
+        const saveCustomArmsBtn = document.getElementById('saveCustomArms');
+        if (saveCustomArmsBtn) {
+            saveCustomArmsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveCustomArms();
+            });
         }
     }
 
-    isPointInPolygon(x, y, polygon) {
-        let inside = false;
-        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const xi = polygon[i][0], yi = polygon[i][1];
-            const xj = polygon[j][0], yj = polygon[j][1];
-
-            const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
+    toggleCustomMode(enabled) {
+        const updateWBBtn = document.getElementById('updateWBRange');
+        if (updateWBBtn) {
+            updateWBBtn.textContent = enabled ? 'Edit Envelope & Arms' : 'Update W&B Range';
         }
-        return inside;
+
+        if (enabled) {
+            this.showMessage('Custom Mode enabled. You can now edit envelope points and arm values.', 'info');
+        }
     }
 
-    // ===== AUTOCOMPLETE FUNCTIONS =====
+// ===== AUTOCOMPLETE FUNCTIONS =====
     setupAutocomplete(inputElement) {
         let autocompleteTimeout = null;
 
@@ -510,17 +534,6 @@ this.updateWeightBalanceHeaders();
                 this.saveWBRange();
             });
         }
-    
-
-        // Aircraft Selection Event
-        const aircraftSelect = document.getElementById('aircraftSelect');
-        if (aircraftSelect) {
-            aircraftSelect.addEventListener('change', (e) => {
-                console.log('Aircraft changed to:', e.target.value);
-                this.changeAircraft(e.target.value);
-            });
-        }
-    
     }
 
     addWaypointInputs() {
@@ -613,7 +626,8 @@ this.updateWeightBalanceHeaders();
         }
     }
 
-    async calculateFlightData() {
+    
+async calculateFlightData() {
         this.showLoading(true);
         try {
             // Get waypoint names
@@ -915,7 +929,8 @@ this.updateWeightBalanceHeaders();
         }
     }
 
-    // ===== EXPORT FUNCTIONS FINALE OTTIMIZZATE =====
+    
+// ===== EXPORT FUNCTIONS FINALE OTTIMIZZATE =====
 
     // FUNZIONE PRINCIPALE: Export Excel + PDF finale ottimizzato
         async exportExcelAndPDF() {
@@ -1091,7 +1106,8 @@ this.updateWeightBalanceHeaders();
         URL.revokeObjectURL(url);
     }
 
-    // ===== UI UPDATE FUNCTIONS =====
+    
+// ===== UI UPDATE FUNCTIONS =====
 
     updateFlightTable() {
         const tbody = document.getElementById('flightTableBody');
@@ -1206,16 +1222,27 @@ this.updateWeightBalanceHeaders();
 
     // ===== WEIGHT & BALANCE METHODS (COMPLETI) =====
 
-        initializeWeightBalanceTable() {
-        this.updateWeightBalanceHeaders();
-        this.updateWeightBalanceTable();
+    initializeWeightBalanceTable() {
+        const tbody = document.getElementById('wbTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        this.weightBalanceData.categories.forEach((category, index) => {
+            const row = tbody.insertRow();
+            const isTotal = index === this.weightBalanceData.categories.length - 1;
+            row.innerHTML = `
+                <td>${category}</td>
+                <td>${isTotal ? '<span id="totalWeight">0</span>' : 
+                    `<input type="number" class="form-control aviation-input" id="weight${index}" value="0" min="0" step="0.1" ${isTotal ? 'readonly' : ''}>`}</td>
+                <td>${isTotal ? '<span id="totalArm">0</span>' : this.weightBalanceData.arms[index]}</td>
+                <td>${isTotal ? '<span id="totalMoment">0</span>' : `<span id="moment${index}">0</span>`}</td>
+            `;
+        });
     }
 
-        initializeWeightBalanceChart() {
+    initializeWeightBalanceChart() {
         const canvas = document.getElementById('wbChart');
         if (!canvas) return;
-
-        const config = this.aircraftConfigs[this.currentAircraft];
 
         const ctx = canvas.getContext('2d');
         this.weightBalanceData.chart = new Chart(ctx, {
@@ -1223,7 +1250,7 @@ this.updateWeightBalanceHeaders();
             data: {
                 datasets: [{
                     label: 'W&B Envelope',
-                    data: config.envelope,
+                    data: this.weightBalanceData.envelope,
                     borderColor: '#1FB8CD',
                     backgroundColor: 'rgba(31, 184, 205, 0.1)',
                     showLine: true,
@@ -1246,63 +1273,23 @@ this.updateWeightBalanceHeaders();
                     x: {
                         title: {
                             display: true,
-                            text: `Moment [${config.momentUnit}]`
+                            text: 'Weight (kg)'
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: `Weight [${config.unit}]`
+                            text: 'Moment'
                         }
                     }
                 },
                 plugins: {
                     legend: {
                         display: true
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `W: ${context.parsed.y.toFixed(1)}, M: ${context.parsed.x.toFixed(1)}`;
-                            }
-                        }
                     }
                 }
             }
         });
-    }
-
-    updateWeightBalanceChart() {
-        if (!this.weightBalanceData.chart) {
-            this.initializeWeightBalanceChart();
-            return;
-        }
-
-        const config = this.aircraftConfigs[this.currentAircraft];
-        const totalIndex = this.weightBalanceData.categories.length - 1;
-
-        // Update envelope data - CHIAVE per il refresh del grafico
-        this.weightBalanceData.chart.data.datasets[0].data = [...config.envelope];
-
-        // Update aircraft position
-        const totalWeight = this.weightBalanceData.weights[totalIndex] || 0;
-        const totalMoment = this.weightBalanceData.moments[totalIndex] || 0;
-
-        if (totalWeight > 0) {
-            this.weightBalanceData.chart.data.datasets[1].data = [{
-                x: totalMoment,
-                y: totalWeight
-            }];
-        } else {
-            this.weightBalanceData.chart.data.datasets[1].data = [];
-        }
-
-        // Update axis labels
-        this.weightBalanceData.chart.options.scales.x.title.text = `Moment [${config.momentUnit}]`;
-        this.weightBalanceData.chart.options.scales.y.title.text = `Weight [${config.unit}]`;
-
-        // IMPORTANTE: forza l'update del grafico
-        this.weightBalanceData.chart.update('active');
     }
 
     calculateWeightBalance() {
@@ -1529,25 +1516,387 @@ this.updateWeightBalanceHeaders();
 document.addEventListener('DOMContentLoaded', () => {
     window.flightPlanner = new VFRFlightPlanner();
 });
+    // ===== WEIGHT & BALANCE FUNCTIONS (MODIFIED FOR MULTI-AIRCRAFT) =====
 
+    initializeWeightBalanceTable() {
+        const tbody = document.getElementById('wbTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-// Safety initializer: ensure Weight & Balance UI is initialized after DOM load
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        if (window.flightPlanner) {
-            const fp = window.flightPlanner;
-            // ensure currentAircraft set
-            if (!fp.currentAircraft) fp.currentAircraft = 'TB9';
-            // force update headers and table
-            if (typeof fp.updateWeightBalanceHeaders === 'function') fp.updateWeightBalanceHeaders();
-            if (typeof fp.updateWeightBalanceTable === 'function') fp.updateWeightBalanceTable();
-            if (typeof fp.initializeWeightBalanceChart === 'function' && !fp.weightBalanceData.chart) {
-                fp.initializeWeightBalanceChart();
-            } else if (typeof fp.updateWeightBalanceChart === 'function') {
-                fp.updateWeightBalanceChart();
-            }
-        }
-    } catch (err) {
-        console.error('W&B initialization safety error:', err);
+        const aircraft = this.aircraftDatabase[this.currentAircraft];
+
+        this.weightBalanceData.categories.forEach((category, index) => {
+            const row = tbody.insertRow();
+            const armValue = this.weightBalanceData.arms[index];
+            const weightValue = index === 0 && aircraft.emptyWeight > 0 ? aircraft.emptyWeight : 0;
+
+            row.innerHTML = `
+                <td>${category}</td>
+                <td><input type="number" class="form-control aviation-input" id="weight${index}" value="${weightValue}" min="0" step="0.1"></td>
+                <td>${this.customModeEnabled ? 
+                    `<input type="number" class="form-control aviation-input" id="arm${index}" value="${armValue}" step="0.001">` : 
+                    armValue}</td>
+                <td><span id="moment${index}">0</span></td>
+            `;
+        });
+
+        // Add Total row
+        const totalRow = tbody.insertRow();
+        totalRow.innerHTML = `
+            <td><strong>Total</strong></td>
+            <td><strong><span id="totalWeight">0</span></strong></td>
+            <td><strong><span id="totalArm">0</span></strong></td>
+            <td><strong><span id="totalMoment">0</span></strong></td>
+        `;
     }
-});
+
+    initializeWeightBalanceChart() {
+        const canvas = document.getElementById('wbChart');
+        if (!canvas) return;
+
+        const aircraft = this.aircraftDatabase[this.currentAircraft];
+        const ctx = canvas.getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (this.weightBalanceData.chart) {
+            this.weightBalanceData.chart.destroy();
+        }
+
+        this.weightBalanceData.chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'W&B Envelope',
+                    data: this.weightBalanceData.envelope,
+                    borderColor: '#1FB8CD',
+                    backgroundColor: 'rgba(31, 184, 205, 0.1)',
+                    showLine: true,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#1FB8CD'
+                }, {
+                    label: 'Aircraft Position',
+                    data: [],
+                    backgroundColor: '#DB4545',
+                    borderColor: '#DB4545',
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: aircraft.xLabel
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: aircraft.yLabel
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: (${context.parsed.x.toFixed(2)}, ${context.parsed.y.toFixed(2)})`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    calculateWeightBalance() {
+        try {
+            const aircraft = this.aircraftDatabase[this.currentAircraft];
+            let totalWeight = 0;
+            let totalMoment = 0;
+
+            // Calculate for each category
+            this.weightBalanceData.categories.forEach((category, index) => {
+                const weightInput = document.getElementById(`weight${index}`);
+                let armValue = this.weightBalanceData.arms[index];
+
+                // If custom mode, get arm from input
+                if (this.customModeEnabled) {
+                    const armInput = document.getElementById(`arm${index}`);
+                    if (armInput) {
+                        armValue = parseFloat(armInput.value) || 0;
+                        this.weightBalanceData.arms[index] = armValue;
+                    }
+                }
+
+                if (!weightInput) return;
+
+                let weight = parseFloat(weightInput.value) || 0;
+
+                // Handle fuel conversion for imperial units
+                if (category.includes('Fuel') && aircraft.units === 'imperial') {
+                    // Convert liters to lbs using aircraft fuel conversion factor
+                    weight = weight * aircraft.fuelConversion;
+                }
+
+                let moment = weight * armValue;
+
+                // Add landing gear moment for PA28
+                if (index === this.weightBalanceData.categories.length - 1 && aircraft.landingGearMoment > 0) {
+                    moment += aircraft.landingGearMoment;
+                }
+
+                this.weightBalanceData.weights[index] = weight;
+                this.weightBalanceData.moments[index] = moment;
+
+                totalWeight += weight;
+                totalMoment += moment;
+
+                // Update moment display
+                const momentSpan = document.getElementById(`moment${index}`);
+                if (momentSpan) {
+                    momentSpan.textContent = moment.toFixed(2);
+                }
+            });
+
+            // Calculate final arm (CG position)
+            const finalArm = totalWeight > 0 ? totalMoment / totalWeight : 0;
+
+            // Update totals
+            document.getElementById('totalWeight').textContent = totalWeight.toFixed(2);
+            document.getElementById('totalArm').textContent = finalArm.toFixed(3);
+            document.getElementById('totalMoment').textContent = totalMoment.toFixed(2);
+
+            // Update chart with aircraft position
+            if (this.weightBalanceData.chart) {
+                this.weightBalanceData.chart.data.datasets[1].data = [{
+                    x: totalMoment,
+                    y: totalWeight
+                }];
+                this.weightBalanceData.chart.update();
+            }
+
+            // Check if within limits
+            const isWithinLimits = this.isPointInsidePolygon(
+                totalMoment, 
+                totalWeight, 
+                this.weightBalanceData.envelope
+            );
+
+            const statusDiv = document.getElementById('wbStatus');
+            if (statusDiv) {
+                if (isWithinLimits) {
+                    statusDiv.className = 'alert alert-success mt-2 inside-range';
+                    statusDiv.textContent = 'DENTRO I LIMITI - SAFE FOR FLIGHT';
+                } else {
+                    statusDiv.className = 'alert alert-danger mt-2 outside-range';
+                    statusDiv.textContent = 'FUORI LIMITI - NOT SAFE FOR FLIGHT';
+                }
+            }
+
+            this.showMessage('Calcolo Weight & Balance completato', 'success');
+
+        } catch (error) {
+            console.error('Weight & Balance calculation error:', error);
+            this.showMessage(`Errore nel calcolo: ${error.message}`, 'error');
+        }
+    }
+
+    isPointInsidePolygon(x, y, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i][0], yi = polygon[i][1];
+            const xj = polygon[j][0], yj = polygon[j][1];
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    resetWeightBalance() {
+        this.loadAircraftData(this.currentAircraft);
+        this.initializeWeightBalanceTable();
+
+        if (this.weightBalanceData.chart) {
+            this.weightBalanceData.chart.data.datasets[1].data = [];
+            this.weightBalanceData.chart.update();
+        }
+
+        const statusDiv = document.getElementById('wbStatus');
+        if (statusDiv) {
+            statusDiv.className = '';
+            statusDiv.textContent = '';
+        }
+
+        this.showMessage('Weight & Balance resettato', 'success');
+    }
+
+    showWBRangeModal() {
+        const modal = new bootstrap.Modal(document.getElementById('wbRangeModal'));
+        const container = document.getElementById('wbRangeInputs');
+
+        if (!container) return;
+        container.innerHTML = '';
+
+        const numPoints = this.weightBalanceData.envelope.length;
+
+        this.weightBalanceData.envelope.forEach((point, index) => {
+            const div = document.createElement('div');
+            div.className = 'wb-range-input';
+            div.innerHTML = `
+                <label>Point ${index + 1}:</label>
+                <input type="number" class="form-control" id="envelopeX${index}" 
+                    placeholder="X (Moment)" value="${point[0]}" step="0.1">
+                <input type="number" class="form-control" id="envelopeY${index}" 
+                    placeholder="Y (Weight)" value="${point[1]}" step="0.1">
+            `;
+            container.appendChild(div);
+        });
+
+        // If custom mode, also show arms editor button
+        if (this.customModeEnabled) {
+            const armsButton = document.createElement('button');
+            armsButton.className = 'btn aviation-btn-secondary mt-3 w-100';
+            armsButton.textContent = 'Edit Arm Values';
+            armsButton.onclick = () => {
+                modal.hide();
+                this.showCustomArmsModal();
+            };
+            container.appendChild(armsButton);
+        }
+
+        modal.show();
+    }
+
+    showCustomArmsModal() {
+        const modal = new bootstrap.Modal(document.getElementById('customArmsModal'));
+        const container = document.getElementById('customArmsInputs');
+
+        if (!container) return;
+        container.innerHTML = '';
+
+        this.weightBalanceData.categories.forEach((category, index) => {
+            const div = document.createElement('div');
+            div.className = 'wb-range-input';
+            div.innerHTML = `
+                <label>${category}:</label>
+                <input type="number" class="form-control" id="customArm${index}" 
+                    value="${this.weightBalanceData.arms[index]}" step="0.001">
+            `;
+            container.appendChild(div);
+        });
+
+        modal.show();
+    }
+
+    saveWBRange() {
+        try {
+            const newEnvelope = [];
+
+            for (let i = 0; i < this.weightBalanceData.envelope.length; i++) {
+                const xInput = document.getElementById(`envelopeX${i}`);
+                const yInput = document.getElementById(`envelopeY${i}`);
+
+                if (xInput && yInput) {
+                    const x = parseFloat(xInput.value);
+                    const y = parseFloat(yInput.value);
+
+                    if (isNaN(x) || isNaN(y)) {
+                        throw new Error(`Valori non validi per il punto ${i + 1}`);
+                    }
+
+                    newEnvelope.push([x, y]);
+                }
+            }
+
+            if (newEnvelope.length < 3) {
+                throw new Error('Sono necessari almeno 3 punti per definire l\'envelope');
+            }
+
+            this.weightBalanceData.envelope = newEnvelope;
+
+            if (this.weightBalanceData.chart) {
+                this.weightBalanceData.chart.data.datasets[0].data = newEnvelope;
+                this.weightBalanceData.chart.update();
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('wbRangeModal'));
+            if (modal) modal.hide();
+
+            this.showMessage('Envelope aggiornato con successo', 'success');
+
+        } catch (error) {
+            console.error('Save WB Range error:', error);
+            this.showMessage(`Errore: ${error.message}`, 'error');
+        }
+    }
+
+    saveCustomArms() {
+        try {
+            this.weightBalanceData.categories.forEach((category, index) => {
+                const armInput = document.getElementById(`customArm${index}`);
+
+                if (armInput) {
+                    const armValue = parseFloat(armInput.value);
+
+                    if (isNaN(armValue)) {
+                        throw new Error(`Valore non valido per ${category}`);
+                    }
+
+                    this.weightBalanceData.arms[index] = armValue;
+                }
+            });
+
+            // Refresh the table to show new arm values
+            this.initializeWeightBalanceTable();
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('customArmsModal'));
+            if (modal) modal.hide();
+
+            this.showMessage('Valori dei bracci aggiornati con successo', 'success');
+
+        } catch (error) {
+            console.error('Save Custom Arms error:', error);
+            this.showMessage(`Errore: ${error.message}`, 'error');
+        }
+    }
+
+showMessage(message, type) {
+        // Create a temporary alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'info' ? 'info' : 'warning'} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+        }
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.flightPlanner = new VFRFlightPlanner();
+
+}
+
