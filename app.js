@@ -45,7 +45,7 @@ class VFRFlightPlanner {
                 arms: [89.48, 80.5, 118.1, 95, 142.9],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Rear seats", "Fuel on Board [liters]", "Luggage rack"],
                 units: 'imperial',
-                xLabel: 'Momentum [lbs x inch]',
+                xLabel: 'Position CG [inch]',
                 yLabel: 'Mass [lbs]',
                 fuelConversion: 1.59,
                 landingGearMoment: 819
@@ -57,7 +57,7 @@ class VFRFlightPlanner {
                 arms: [16.492, -37.4, -5.7, 34.2, 30.3, 60.7],
                 categories: ["AC Empty Weight", "Pilot+Copilot", "Passengers Row 1", "Passengers Row 2", "Fuel on Board [liters]", "Luggage"],
                 units: 'imperial',
-                xLabel: 'Momentum [lbs x inch]',
+                xLabel: 'Position CG [inch]',
                 yLabel: 'Mass [lbs]',
                 fuelConversion: 1.59,
                 landingGearMoment: 0
@@ -1146,9 +1146,23 @@ class VFRFlightPlanner {
                 this.weightBalanceData.chart.update();
             }
 
+            // Determine which coordinates to use for polygon check
+            let checkX, checkY;
+            const aircraftForCheck = this.aircraftDatabase[this.currentAircraft];
+
+            if (aircraftForCheck.name === 'P68B' || aircraftForCheck.name === 'PA28') {
+                // For imperial units: use finalArm (CG) and totalWeight
+                checkX = totalWeight > 0 ? totalMoment / totalWeight : 0;
+                checkY = totalWeight;
+            } else {
+                // For metric units: use totalMoment and totalWeight
+                checkX = totalMoment;
+                checkY = totalWeight;
+            }
+
             const isWithinLimits = this.isPointInsidePolygon(
-                totalMoment, 
-                totalWeight, 
+                checkX, 
+                checkY, 
                 this.weightBalanceData.envelope
             );
 
