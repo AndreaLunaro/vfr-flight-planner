@@ -1146,23 +1146,9 @@ class VFRFlightPlanner {
                 this.weightBalanceData.chart.update();
             }
 
-            // Determine which coordinates to use for polygon check
-            let checkX, checkY;
-            const aircraft = this.aircraftDatabase[this.currentAircraft];
-
-            if (aircraft.name === 'P68B' || aircraft.name === 'PA28') {
-                // For imperial units: use finalArm (CG) and totalWeight
-                checkX = totalWeight > 0 ? totalMoment / totalWeight : 0;
-                checkY = totalWeight;
-            } else {
-                // For metric units: use totalMoment and totalWeight
-                checkX = totalMoment;
-                checkY = totalWeight;
-            }
-
             const isWithinLimits = this.isPointInsidePolygon(
-                checkX, 
-                checkY, 
+                totalMoment, 
+                totalWeight, 
                 this.weightBalanceData.envelope
             );
 
