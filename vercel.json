@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/html-to-pdf.js": {
+      "maxDuration": 60        
+    }
+  }
+}
