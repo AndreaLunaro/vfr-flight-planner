@@ -116,11 +116,6 @@ export class UIManager {
         });
     }
 
-    // ... (rest of the methods adapted from app.js)
-    // I will implement the rest of the methods in the next steps or in one go if possible.
-    // Since the file is large, I'll write the skeleton and then fill it in or write it all at once if it fits.
-    // I'll try to write the full content.
-
     toggleCustomMode(enabled) {
         const updateWBBtn = document.getElementById('updateWBRange');
         if (updateWBBtn) {
@@ -137,7 +132,7 @@ export class UIManager {
         if (!container) return;
 
         if (numWaypoints < 2 || numWaypoints > 15) {
-            this.showMessage('Il numero di waypoint deve essere tra 2 e 15', 'error');
+            this.showMessage('The number of waypoints must be between 2 and 15', 'error');
             numWaypointsInput.value = Math.max(2, Math.min(15, numWaypoints));
             return;
         }
@@ -158,7 +153,7 @@ export class UIManager {
                 this.autocomplete.setup(input);
             }
         }
-        this.showMessage(`${numWaypoints} campi waypoint generati con successo`, 'success');
+        this.showMessage(`${numWaypoints} waypoint fields generated successfully`, 'success');
     }
 
     addAlternateWaypointInputs() {
@@ -170,7 +165,7 @@ export class UIManager {
         if (!container) return;
 
         if (numWaypoints < 2 || numWaypoints > 10) {
-            this.showMessage('Il numero di waypoint alternati deve essere tra 2 e 10', 'error');
+            this.showMessage('The number of alternate waypoints must be between 2 and 10', 'error');
             numAlternateWaypointsInput.value = Math.max(2, Math.min(10, numWaypoints));
             return;
         }
@@ -191,7 +186,7 @@ export class UIManager {
                 this.autocomplete.setup(input);
             }
         }
-        this.showMessage(`${numWaypoints} campi waypoint alternati generati con successo`, 'success');
+        this.showMessage(`${numWaypoints} alternate waypoint fields generated successfully`, 'success');
     }
 
     toggleAlternateSection(show) {
@@ -225,17 +220,17 @@ export class UIManager {
                 const input = document.getElementById(`waypoint${i}`);
                 if (!input) continue;
                 const value = input.value.trim();
-                if (!value) throw new Error(`Waypoint ${i + 1} è obbligatorio`);
+                if (!value) throw new Error(`Waypoint ${i + 1} is required`);
                 waypoints.push(value);
             }
 
-            if (waypoints.length === 0) throw new Error('Inserire almeno un waypoint');
+            if (waypoints.length === 0) throw new Error('Please enter at least one waypoint');
 
-            this.showMessage('Geocodificazione waypoints in corso...', 'info');
+            this.showMessage('Geocoding waypoints...', 'info');
             const geocodedWaypoints = await this.geocodeWaypoints(waypoints, 'waypoint');
             this.flightData.waypoints = geocodedWaypoints;
 
-            this.showMessage('Calcolo rotta in corso...', 'info');
+            this.showMessage('Calculating route...', 'info');
             this.flightData.flightResults = await this.calculateRoute(geocodedWaypoints);
 
             const fuelConsumption = parseFloat(document.getElementById('fuelConsumption')?.value || 30);
@@ -243,7 +238,7 @@ export class UIManager {
 
             const alternateCheckbox = document.getElementById('includeAlternate');
             if (alternateCheckbox && alternateCheckbox.checked) {
-                this.showMessage('Calcolo rotta alternata in corso...', 'info');
+                this.showMessage('Calculating alternate route...', 'info');
                 await this.calculateAlternateRoute();
             }
 
@@ -253,11 +248,11 @@ export class UIManager {
             const exportBtn = document.getElementById('exportPlan');
             if (exportBtn) exportBtn.disabled = false;
 
-            this.showMessage('Calcoli completati con successo!', 'success');
+            this.showMessage('Calculations completed successfully!', 'success');
 
         } catch (error) {
             console.error('Calculation error:', error);
-            this.showMessage(`Errore: ${error.message}`, 'error');
+            this.showMessage(`Error: ${error.message}`, 'error');
         } finally {
             this.showLoading(false);
         }
@@ -288,7 +283,7 @@ export class UIManager {
                 });
             } catch (error) {
                 console.error(`Geocoding error for ${waypoint}:`, error);
-                throw new Error(`Impossibile geocodificare: ${waypoint}`);
+                throw new Error(`Unable to geocode: ${waypoint}`);
             }
         }
         return geocoded;
@@ -339,11 +334,11 @@ export class UIManager {
             const input = document.getElementById(`alternateWaypoint${i}`);
             if (!input) continue;
             const value = input.value.trim();
-            if (!value) throw new Error(`Alternate Waypoint ${i + 1} è obbligatorio`);
+            if (!value) throw new Error(`Alternate Waypoint ${i + 1} is required`);
             alternateWaypoints.push(value);
         }
 
-        if (alternateWaypoints.length === 0) throw new Error('Inserire almeno un waypoint alternato');
+        if (alternateWaypoints.length === 0) throw new Error('Please enter at least one alternate waypoint');
 
         const geocodedAlternateWaypoints = await this.geocodeWaypoints(alternateWaypoints, 'alternateWaypoint');
         this.flightData.alternateWaypoints = geocodedAlternateWaypoints;
@@ -377,10 +372,10 @@ export class UIManager {
     }
 
     updateFuelDisplay() {
-        document.getElementById('tripFuel').textContent = `${this.flightData.fuelData.tripFuel || 0} litri`;
-        document.getElementById('contingencyFuel').textContent = `${this.flightData.fuelData.contingencyFuel || 0} litri`;
-        document.getElementById('reserveFuel').textContent = `${this.flightData.fuelData.reserveFuel || 0} litri`;
-        document.getElementById('totalFuel').textContent = `${this.flightData.fuelData.totalFuel || 0} litri`;
+        document.getElementById('tripFuel').textContent = `${this.flightData.fuelData.tripFuel || 0} liters`;
+        document.getElementById('contingencyFuel').textContent = `${this.flightData.fuelData.contingencyFuel || 0} liters`;
+        document.getElementById('reserveFuel').textContent = `${this.flightData.fuelData.reserveFuel || 0} liters`;
+        document.getElementById('totalFuel').textContent = `${this.flightData.fuelData.totalFuel || 0} liters`;
     }
 
     updateAlternateTable() {
@@ -407,7 +402,7 @@ export class UIManager {
     updateAlternateFuelDisplay() {
         const alternateFuelEl = document.getElementById('alternateTripFuel');
         if (alternateFuelEl) {
-            alternateFuelEl.textContent = `${this.flightData.alternateFuelData.alternateFuel || 0} litri`;
+            alternateFuelEl.textContent = `${this.flightData.alternateFuelData.alternateFuel || 0} liters`;
         }
     }
 
@@ -425,12 +420,12 @@ export class UIManager {
         const exportBtn = document.getElementById('exportPlan');
         if (exportBtn) exportBtn.disabled = true;
 
-        this.showMessage('Piano di volo resettato', 'success');
+        this.showMessage('Flight plan reset', 'success');
     }
 
     async exportExcelAndPDF() {
         if (!this.flightData.flightResults || this.flightData.flightResults.length === 0) {
-            this.showMessage('Nessun dato di volo da esportare', 'error');
+            this.showMessage('No flight data to export', 'error');
             return;
         }
 
@@ -438,18 +433,18 @@ export class UIManager {
             this.showLoading(true);
 
             // Generiamo prima l'Excel
-            this.showMessage('Generazione Excel in corso...', 'info');
+            this.showMessage('Generating Excel...', 'info');
             await ExportService.exportToExcel(this.flightData);
             await new Promise(resolve => setTimeout(resolve, 500)); // Piccolo delay per non sovrapporre i download
 
             // Poi generiamo il PDF
-            this.showMessage('Generazione PDF in corso...', 'info');
+            this.showMessage('Generating PDF...', 'info');
             await ExportService.exportToPDF(this.flightData);
 
-            this.showMessage('Export Excel e PDF completati con successo!', 'success');
+            this.showMessage('Excel and PDF export completed successfully!', 'success');
         } catch (error) {
             console.error('Export error:', error);
-            this.showMessage(`Errore durante l'export: ${error.message}`, 'error');
+            this.showMessage(`Export error: ${error.message}`, 'error');
         } finally {
             this.showLoading(false);
         }
@@ -585,18 +580,18 @@ export class UIManager {
             if (statusDiv) {
                 if (isWithinLimits) {
                     statusDiv.className = 'alert alert-success mt-2';
-                    statusDiv.textContent = 'DENTRO I LIMITI - SAFE FOR FLIGHT';
+                    statusDiv.textContent = 'WITHIN LIMITS - SAFE FOR FLIGHT';
                 } else {
                     statusDiv.className = 'alert alert-danger mt-2';
-                    statusDiv.textContent = 'FUORI LIMITI - NOT SAFE FOR FLIGHT';
+                    statusDiv.textContent = 'OUT OF LIMITS - NOT SAFE FOR FLIGHT';
                 }
             }
 
-            this.showMessage('Calcolo Weight & Balance completato', 'success');
+            this.showMessage('Weight & Balance calculation completed', 'success');
 
         } catch (error) {
             console.error('Weight & Balance calculation error:', error);
-            this.showMessage(`Errore: ${error.message}`, 'error');
+            this.showMessage(`Error: ${error.message}`, 'error');
         }
     }
 
@@ -612,7 +607,7 @@ export class UIManager {
             statusDiv.className = '';
             statusDiv.textContent = '';
         }
-        this.showMessage('Weight & Balance resettato', 'success');
+        this.showMessage('Weight & Balance reset', 'success');
     }
 
     showWBRangeModal() {
@@ -680,7 +675,7 @@ export class UIManager {
                 if (xInput && yInput) {
                     const x = parseFloat(xInput.value);
                     const y = parseFloat(yInput.value);
-                    if (isNaN(x) || isNaN(y)) throw new Error(`Valori non validi per il punto ${i + 1}`);
+                    if (isNaN(x) || isNaN(y)) throw new Error(`Invalid values for point ${i + 1}`);
                     newEnvelope.push([x, y]);
                 }
             }
@@ -692,9 +687,9 @@ export class UIManager {
             const modal = bootstrap.Modal.getInstance(document.getElementById('wbRangeModal'));
             if (modal) modal.hide();
 
-            this.showMessage('Envelope aggiornato', 'success');
+            this.showMessage('Envelope updated', 'success');
         } catch (error) {
-            this.showMessage(`Errore: ${error.message}`, 'error');
+            this.showMessage(`Error: ${error.message}`, 'error');
         }
     }
 
@@ -704,7 +699,7 @@ export class UIManager {
                 const armInput = document.getElementById(`customArm${index}`);
                 if (armInput) {
                     const armValue = parseFloat(armInput.value);
-                    if (isNaN(armValue)) throw new Error(`Valore non valido per ${category}`);
+                    if (isNaN(armValue)) throw new Error(`Invalid value for ${category}`);
                     this.aircraft.weightBalanceData.arms[index] = armValue;
                 }
             });
@@ -713,9 +708,9 @@ export class UIManager {
             const modal = bootstrap.Modal.getInstance(document.getElementById('customArmsModal'));
             if (modal) modal.hide();
 
-            this.showMessage('Bracci aggiornati', 'success');
+            this.showMessage('Arms updated', 'success');
         } catch (error) {
-            this.showMessage(`Errore: ${error.message}`, 'error');
+            this.showMessage(`Error: ${error.message}`, 'error');
         }
     }
 

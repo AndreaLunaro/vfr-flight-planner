@@ -37,6 +37,37 @@ export class AirportService {
         return this.loadingPromise;
     }
 
+    /**
+     * Clear cached airport data to force a fresh download
+     * Useful if data appears incorrect or outdated
+     */
+    static async clearCache() {
+        try {
+            const db = await this.initDB();
+            if (db) {
+                const transaction = db.transaction(['data'], 'readwrite');
+                const store = transaction.objectStore('data');
+                store.delete('airports');
+                store.delete('runways');
+                store.delete('frequencies');
+                await new Promise((resolve, reject) => {
+                    transaction.oncomplete = resolve;
+                    transaction.onerror = reject;
+                });
+            }
+            this.airports = [];
+            this.runways = [];
+            this.frequencies = [];
+            this.dataLoaded = false;
+            this.loadingPromise = null;
+            console.log('Airport data cache cleared successfully');
+            return true;
+        } catch (e) {
+            console.error('Failed to clear cache:', e);
+            return false;
+        }
+    }
+
     static async loadAllData() {
         console.log('Checking local cache for airport data...');
 
@@ -199,7 +230,73 @@ export class AirportService {
         return result;
     }
 
+    /**
+     * Get airport info - tries OpenAIP first, then OurAirports as fallback
+     * @param {string} icaoCode - ICAO airport code
+     * @returns {Object|null} Airport info with runways, frequencies, and nearby airports
+     */
     static async getAirportInfo(icaoCode) {
+        const code = icaoCode.toUpperCase();
+
+        // 1. Try OpenAIP first (more accurate data) with timeout
+        try {
+            console.log(`Trying OpenAIP for ${code}...`);
+
+            // Timeout after 3 seconds
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            const response = await fetch(`/api/openaip-airport?icao=${code}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const airport = await response.json();
+                console.log('✓ Got data from OpenAIP:', airport.name);
+
+                // Return immediately, load nearby airports in background
+                const result = {
+                    ...airport,
+                    nearby: [] // Will be populated in background
+                };
+
+                // Load nearby airports in background (non-blocking)
+                this.loadNearbyAirportsAsync(airport.latitude_deg, airport.longitude_deg)
+                    .then(nearby => {
+                        result.nearby = nearby;
+                    })
+                    .catch(e => console.warn('Nearby airports not loaded:', e));
+
+                return result;
+            } else {
+                console.warn('OpenAIP returned:', response.status);
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.warn('OpenAIP timeout, falling back to OurAirports');
+            } else {
+                console.warn('OpenAIP failed:', error.message);
+            }
+        }
+
+        // 2. Fallback to OurAirports
+        console.log(`Falling back to OurAirports for ${code}...`);
+        return this.getAirportInfoFromOurAirports(code);
+    }
+
+    /**
+     * Load nearby airports in background (non-blocking)
+     */
+    static async loadNearbyAirportsAsync(lat, lon) {
+        await this.ensureDataLoaded();
+        return this.findNearbyAirports(parseFloat(lat), parseFloat(lon), 50);
+    }
+
+    /**
+     * Get airport info from OurAirports (fallback source)
+     */
+    static async getAirportInfoFromOurAirports(icaoCode) {
         await this.ensureDataLoaded();
 
         const code = icaoCode.toUpperCase();
@@ -207,18 +304,18 @@ export class AirportService {
 
         if (!airport) return null;
 
-        // Filter runways and frequencies for this airport
-        // OurAirports uses 'id' in airports.csv to link runways (airport_ref) and frequencies (airport_ref)
         const airportId = airport.id;
-
         const airportRunways = this.runways.filter(r => r.airport_ref === airportId);
         const airportFrequencies = this.frequencies.filter(f => f.airport_ref === airportId);
-
-        // Find nearby airports (simple radius check)
-        const nearby = this.findNearbyAirports(parseFloat(airport.latitude_deg), parseFloat(airport.longitude_deg), 50); // 50km radius
+        const nearby = this.findNearbyAirports(
+            parseFloat(airport.latitude_deg),
+            parseFloat(airport.longitude_deg),
+            50
+        );
 
         return {
             ...airport,
+            source: 'OurAirports',
             runways: airportRunways,
             frequencies: airportFrequencies,
             nearby: nearby

@@ -54,7 +54,7 @@ export class GeocodingService {
 
         const data = await response.json();
         if (data.length === 0) {
-            throw new Error(`Nessun risultato trovato per: ${query}`);
+            throw new Error(`No results found for: ${query}`);
         }
 
         return {

@@ -99,10 +99,10 @@ export class ExportService {
     }
 
     /**
-     * Esporta il piano di volo in PDF formato A4 landscape (Split Layout)
-     * Layout: A4 piegato in due.
-     * Sinistra: Main Route
-     * Destra: Alternate Route + Fuel
+     * Export flight plan to PDF in A4 landscape format (Split Layout)
+     * Layout: A4 folded in two.
+     * Left: Main Route
+     * Right: Alternate Route + Fuel
      */
     static async exportToPDF(flightData) {
         try {
@@ -120,10 +120,10 @@ export class ExportService {
             const margin = 10;
             const midGutter = 10;
 
-            // Larghezza di ogni sezione (metà pagina meno margini)
+            // Width of each section (half page minus margins)
             const sectionWidth = (pageWidth - (margin * 2) - midGutter) / 2;
 
-            // Coordinate X di partenza
+            // Start X coordinates
             const leftSectionX = margin;
             const rightSectionX = margin + sectionWidth + midGutter;
 
@@ -135,19 +135,19 @@ export class ExportService {
                 pdf.setLineWidth(0.3);
                 pdf.setFillColor(255, 255, 255);
 
-                // Righe vuote iniziali (titolo, note, etc custom dell'utente)
-                // Usiamo 3 righe da 7mm
+                // Initial empty rows (title, notes, user custom etc)
+                // Using 3 rows of 7mm
                 const headerRowHeight = 7;
                 for (let i = 0; i < 3; i++) {
                     pdf.rect(xStart, y, sectionWidth, headerRowHeight);
                     y += headerRowHeight;
                 }
 
-                y += 2; // Spazietto
+                y += 2; // Small gap
 
                 // Info Strip: ATIS INFO | RWY | Wind | QNH
                 const infoHeight = 6;
-                // Proporzioni larghezza colonne
+                // Column width proportions
                 const colWs = [
                     sectionWidth * 0.4, // ATIS
                     sectionWidth * 0.15, // RWY
@@ -168,7 +168,7 @@ export class ExportService {
                 }
                 y += infoHeight;
 
-                // 2 Righe vuote compilabili sotto l'header info
+                // 2 Empty fillable rows under info header
                 const emptyRowH = 8;
                 for (let r = 0; r < 2; r++) {
                     let cx2 = xStart;
@@ -179,7 +179,7 @@ export class ExportService {
                     y += emptyRowH;
                 }
 
-                return y + 5; // Ritorna la Y finale + spazio
+                return y + 5; // Return final Y + space
             };
 
             // --- TABLE DRAWING HELPER ---
@@ -227,7 +227,7 @@ export class ExportService {
                     styles: {
                         lineWidth: 0.1,
                         lineColor: [0, 0, 0],
-                        fontSize: 8, // Font leggermente più piccolo per stare nella metà pagina
+                        fontSize: 8, // Font slightly smaller to fit in half page
                         cellPadding: 1,
                         textColor: [0, 0, 0],
                         font: 'helvetica',
@@ -244,7 +244,7 @@ export class ExportService {
                         0: { halign: 'left', cellWidth: 25 }, // FIX slightly narrower
                     },
                     didParseCell: function (data) {
-                        // Evidenzia colonna Radials (index 4)
+                        // Highlight Radials column (index 4)
                         if ((data.section === 'body' || data.section === 'head') && data.column.index === 4) {
                             data.cell.styles.fillColor = [220, 220, 220];
                         }
@@ -268,31 +268,30 @@ export class ExportService {
             // Alternate Route Table
             const altResults = (flightData.alternateResults && flightData.alternateResults.length > 0)
                 ? flightData.alternateResults
-                : []; // Se vuoto disegnerà righe vuote grazie al minRows
+                : []; // If empty will draw empty rows thanks to minRows
 
             const finalRightTableY = drawRouteTable(rightSectionX, rightY, altResults);
 
             // --- FUEL TABLE (BOTTOM RIGHT) ---
 
-            // Fix: usa 'margin' invece di 'rightMargin' che non è definito
-            const fuelTableX = pageWidth - 100 - margin; // Allineato a destra, largo 100mm
+            const fuelTableX = pageWidth - 100 - margin; // Right aligned, 100mm wide
             const fuelTableWidth = 100;
             const fuelRowHeight = 6;
 
-            // Calcola Y posizione
-            const fuelTableHeight = 6 * 45; // Stima
+            // Calculate Y position
+            const fuelTableHeight = 6 * 45; // Estimate
             let fuelY = pageHeight - margin - (6 * 6) - 5; // Height approx 40mm
 
-            // Assicuriamoci che non si sovrapponga alla tabella alternata
+            // Ensure no overlap with alternate table
             if (finalRightTableY + 5 > fuelY) {
                 fuelY = finalRightTableY + 5;
             }
 
-            // Dati Fuel
+            // Fuel Data
             const fuelData = flightData.fuelData || {};
             const altFuelData = flightData.alternateFuelData || {};
 
-            // Prepariamo i valori
+            // Prepare values
             const tripFuel = (fuelData.tripFuel || 0);
             const altFuel = (altFuelData.alternateFuel || 0);
             const contFuel = (fuelData.contingencyFuel || 0);
@@ -317,9 +316,9 @@ export class ExportService {
             let curFy = fuelY;
             let curFx = fuelTableX;
 
-            // Disegna Header
-            pdf.rect(curFx, curFy, fuelTableWidth, fuelRowHeight); // Bordo esterno header
-            // Linee verticali
+            // Draw Header
+            pdf.rect(curFx, curFy, fuelTableWidth, fuelRowHeight); // Outer border header
+            // Vertical lines
             pdf.line(curFx + 55, curFy, curFx + 55, curFy + fuelRowHeight);
             pdf.line(curFx + 70, curFy, curFx + 70, curFy + fuelRowHeight);
             pdf.line(curFx + 85, curFy, curFx + 85, curFy + fuelRowHeight);
@@ -350,7 +349,7 @@ export class ExportService {
                     pdf.text(row.val.toFixed(1), curFx + col1W + 4, curFy + 4.5, { align: 'left' });
                 }
 
-                // Kg e Lbs vuoti (0) come da template
+                // Kg and Lbs empty (0) as per template
                 pdf.text('0', curFx + col1W + col2W + 7, curFy + 4.5, { align: 'center' });
                 pdf.text('0', curFx + col1W + col2W + col3W + 7, curFy + 4.5, { align: 'center' });
 
@@ -368,14 +367,14 @@ export class ExportService {
     }
 
     /**
-     * Genera l'HTML per il piano di volo con layout simile al template Excel
+     * Generate HTML for flight plan with layout similar to Excel template
      */
     static generateFlightPlanHTML(flightData) {
         const now = new Date();
-        const dateStr = now.toLocaleDateString('it-IT');
-        const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('en-GB');
+        const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-        // Calcoliamo i totali
+        // Calculate totals
         const totalDistance = flightData.flightResults
             ? flightData.flightResults.reduce((s, r) => s + (r.distance || 0), 0)
             : 0;
@@ -389,7 +388,7 @@ export class ExportService {
             (flightData.fuelData.reserveFuel || 0)
             : 0;
 
-        // Generiamo le righe della tabella principale
+        // Generate main route table rows
         let mainRouteRows = '';
         if (flightData.flightResults && flightData.flightResults.length > 0) {
             mainRouteRows = flightData.flightResults.map((result, index) => {
@@ -414,7 +413,7 @@ export class ExportService {
             }).join('');
         }
 
-        // Generiamo le righe della tabella alternata (se presente)
+        // Generate alternate route table rows (if present)
         let alternateRouteRows = '';
         let alternateSection = '';
         if (flightData.alternateResults && flightData.alternateResults.length > 0) {
@@ -443,7 +442,7 @@ export class ExportService {
 
             alternateSection = `
                 <div class="alternate-section">
-                    <h3>ROTTA ALTERNATA</h3>
+                    <h3>ALTERNATE ROUTE</h3>
                     <table class="flight-table">
                         <thead>
                             <tr>
@@ -460,7 +459,7 @@ export class ExportService {
                         </tbody>
                     </table>
                     <div class="fuel-info">
-                        <strong>Carburante Alternato:</strong> ${altFuel.toFixed(1)} L
+                        <strong>Alternate Fuel:</strong> ${altFuel.toFixed(1)} L
                     </div>
                 </div>
             `;
@@ -605,16 +604,16 @@ export class ExportService {
 <body>
     <div class="header">
         <h1>VFR FLIGHT PLAN</h1>
-        <div class="subtitle">Piano di Volo VFR - ATO 042 Rules</div>
+        <div class="subtitle">VFR Flight Plan - ATO 042 Rules</div>
     </div>
     
     <div class="info-row">
-        <span><strong>Data:</strong> ${dateStr}</span>
-        <span><strong>Ora:</strong> ${timeStr}</span>
+        <span><strong>Date:</strong> ${dateStr}</span>
+        <span><strong>Time:</strong> ${timeStr}</span>
     </div>
     
     <div class="main-section">
-        <h3>ROTTA PRINCIPALE</h3>
+        <h3>MAIN ROUTE</h3>
         <table class="flight-table">
             <thead>
                 <tr>
@@ -632,15 +631,15 @@ export class ExportService {
         </table>
         
         <div class="totals-row">
-            <span>Distanza Totale: ${totalDistance.toFixed(1)} NM</span>
-            <span>Tempo Totale: ${totalTime.toFixed(0)} min</span>
+            <span>Total Distance: ${totalDistance.toFixed(1)} NM</span>
+            <span>Total Time: ${totalTime.toFixed(0)} min</span>
         </div>
         
         <div class="fuel-info">
             <div><strong>Trip Fuel:</strong> ${(flightData.fuelData?.tripFuel || 0).toFixed(1)} L</div>
             <div><strong>Contingency Fuel (5%):</strong> ${(flightData.fuelData?.contingencyFuel || 0).toFixed(1)} L</div>
             <div><strong>Reserve Fuel (30 min):</strong> ${(flightData.fuelData?.reserveFuel || 0).toFixed(1)} L</div>
-            <div class="total">CARBURANTE TOTALE: ${totalFuel.toFixed(1)} L</div>
+            <div class="total">TOTAL FUEL: ${totalFuel.toFixed(1)} L</div>
         </div>
     </div>
     
@@ -650,4 +649,3 @@ export class ExportService {
         `.trim();
     }
 }
-

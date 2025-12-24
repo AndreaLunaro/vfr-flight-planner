@@ -474,9 +474,10 @@ export class VisualWaypointManager {
     }
 
     async exportMapImage() {
-        const waypoints = this.mapManager.getWaypointsData();
+        const mainWaypoints = this.mapManager.getWaypointsData();
+        const alternateWaypoints = this.mapManager.getAlternateWaypointsData();
 
-        if (waypoints.length === 0) {
+        if (mainWaypoints.length === 0) {
             alert('Add waypoints to the map first.');
             return;
         }
@@ -485,8 +486,8 @@ export class VisualWaypointManager {
             console.log('📸 Exporting map...');
             await MapExportService.exportMapAtScale(
                 this.mapManager.map,
-                waypoints,
-                500000 // 1:500,000 scale
+                mainWaypoints,
+                alternateWaypoints
             );
         } catch (error) {
             console.error('Map export error:', error);

@@ -50,17 +50,16 @@ export class WeatherManager {
     async fetchData(icao) {
         this.showLoading(true);
         this.clearDisplay();
-        this.showStatus('Loading airport database... (this may take a moment)', 'info');
+        this.showStatus('Loading data (METAR, TAF, Airport, NOTAMs)...', 'info');
 
         try {
-            // Fetch Weather
-            const [metar, taf] = await Promise.all([
-                WeatherService.getMetar(icao),
-                WeatherService.getTaf(icao)
+            // PARALLEL LOADING - All data fetched simultaneously for speed
+            const [metar, taf, airportInfo, notams] = await Promise.all([
+                WeatherService.getMetar(icao).catch(e => { console.warn('METAR error:', e); return null; }),
+                WeatherService.getTaf(icao).catch(e => { console.warn('TAF error:', e); return null; }),
+                AirportService.getAirportInfo(icao).catch(e => { console.warn('Airport error:', e); return null; }),
+                WeatherService.getNotams(icao).catch(e => { console.warn('NOTAMs error:', e); return null; })
             ]);
-
-            // Fetch Airport Info
-            const airportInfo = await AirportService.getAirportInfo(icao);
 
             if (!metar && !taf && !airportInfo) {
                 this.showStatus('No data found for this airport.', 'warning');
@@ -70,22 +69,16 @@ export class WeatherManager {
             // Store airport info for use in METAR display
             this.currentAirportInfo = airportInfo;
 
+            // Display results as they become available
             if (metar) this.displayMetar(metar, airportInfo);
             if (taf) this.displayTaf(taf);
-
-            // Fetch and display NOTAMs
-            try {
-                const notams = await WeatherService.getNotams(icao);
-                this.displayNotams(notams, icao);
-            } catch (notamError) {
-                console.warn('NOTAMs not available:', notamError);
-            }
+            if (notams) this.displayNotams(notams, icao);
 
             if (airportInfo) {
                 this.displayAirportInfo(airportInfo);
-                this.showStatus('Dati caricati con successo.', 'success');
+                this.showStatus('All data loaded successfully.', 'success');
             } else {
-                this.showStatus('Dati meteo caricati. Info aeroporto non trovate.', 'warning');
+                this.showStatus('Weather data loaded. Airport info not found.', 'warning');
             }
 
         } catch (error) {

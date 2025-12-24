@@ -153,6 +153,7 @@ export class WeatherService {
         // Keywords: BECMG, TEMPO, FMxxxxxx, PROBxx
         // Crucial fix: Do NOT split safely if TEMPO/BECMG is preceded by PROB
         // Using negative lookbehind (?<!PROB\d{2}\s) to avoid splitting 'PROB30 TEMPO'
+        // Using negative lookbehind (?<!PROB\d{2}\s) to avoid splitting 'PROB30 TEMPO'
         const parts = cleanTaf.split(/(?=\s(?:(?<!PROB\d{2}\s)(?:BECMG|TEMPO)|FM\d{6}|PROB\d{2,4}))/g);
 
         return {
@@ -285,7 +286,7 @@ export class WeatherService {
                 {
                     name: 'Desk Aeronautico',
                     url: 'https://www.deskaeronautico.it/mappa/',
-                    description: 'Italian NOTAM Map (aeroporti italiani)'
+                    description: 'Italian NOTAM Map (Italian airports)'
                 },
                 {
                     name: 'ENAV Briefing',
@@ -301,4 +302,3 @@ export class WeatherService {
         };
     }
 }
-

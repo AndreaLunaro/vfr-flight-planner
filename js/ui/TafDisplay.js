@@ -22,7 +22,7 @@ export class TafDisplay {
         this.container.innerHTML = `
             <div class="card aviation-card">
                 <div class="card-header aviation-card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">📋 Previsioni (TAF)</h5>
+                    <h5 class="mb-0">📋 Forecast (TAF)</h5>
                     <span class="badge bg-light text-dark">${parsed.validPeriod}</span>
                 </div>
                 <div class="card-body p-0">
@@ -33,7 +33,7 @@ export class TafDisplay {
                     
                     <!-- Raw TAF -->
                     <div class="p-3 border-top">
-                        <label class="form-label text-muted small text-uppercase mb-1">TAF Codice</label>
+                        <label class="form-label text-muted small text-uppercase mb-1">TAF Code</label>
                         <div class="alert alert-secondary font-monospace small mb-0">${rawTaf}</div>
                     </div>
                 </div>
@@ -46,7 +46,7 @@ export class TafDisplay {
      */
     renderExtendedTable(periods) {
         if (periods.length === 0) {
-            return '<div class="text-center text-muted py-4">Nessun dato previsione disponibile</div>';
+            return '<div class="text-center text-muted py-4">No forecast data available</div>';
         }
 
         // Build header row with time periods
@@ -100,38 +100,38 @@ export class TafDisplay {
             <table class="table table-bordered taf-extended-table mb-0">
                 <thead>
                     <tr>
-                        <th class="taf-label-col">Tempo</th>
+                        <th class="taf-label-col">Time</th>
                         ${headerCells}
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="taf-row-category">
-                        <td class="taf-label-col"><strong>Codice</strong></td>
+                        <td class="taf-label-col"><strong>Code</strong></td>
                         ${categoryCells}
                     </tr>
                     <tr class="taf-row-weather">
-                        <td class="taf-label-col"><strong>Meteo</strong></td>
+                        <td class="taf-label-col"><strong>Weather</strong></td>
                         ${weatherCells}
                     </tr>
                     <tr>
-                        <td class="taf-label-col"><strong>Vista</strong></td>
+                        <td class="taf-label-col"><strong>Vis</strong></td>
                         ${visCells}
                     </tr>
                     <tr>
-                        <td class="taf-label-col"><strong>Base nuvolosa</strong></td>
+                        <td class="taf-label-col"><strong>Cloud Base</strong></td>
                         ${cloudCells}
                     </tr>
                     <tr class="taf-row-wind">
-                        <td class="taf-label-col"><strong>Vento</strong></td>
+                        <td class="taf-label-col"><strong>Wind</strong></td>
                         ${windCells}
                     </tr>
                     <tr>
-                        <td class="taf-label-col"><strong>Velocità</strong></td>
+                        <td class="taf-label-col"><strong>Speed</strong></td>
                         ${speedCells}
                     </tr>
                     ${hasPhenomena ? `
                     <tr>
-                        <td class="taf-label-col"><strong>Fenomeni</strong></td>
+                        <td class="taf-label-col"><strong>Phenomena</strong></td>
                         ${phenomenaCells}
                     </tr>
                     ` : ''}
@@ -172,7 +172,7 @@ export class TafDisplay {
             startHour = parseInt(validMatch[1].substring(2, 4));
             endDay = parseInt(validMatch[2].substring(0, 2));
             endHour = parseInt(validMatch[2].substring(2, 4));
-            validPeriod = `Valido: ${validMatch[1].substring(0, 2)}/${startHour}:00 - ${validMatch[2].substring(0, 2)}/${endHour}:00 UTC`;
+            validPeriod = `Valid: ${validMatch[1].substring(0, 2)}/${startHour}:00 - ${validMatch[2].substring(0, 2)}/${endHour}:00 UTC`;
         }
 
         // Process each segment
@@ -185,17 +185,17 @@ export class TafDisplay {
                 type = 'BECMG';
                 const match = segment.match(/(\d{4})\/(\d{4})/);
                 if (match) timeLabel = `${match[1].substring(2)}:00 → ${match[2].substring(2)}:00`;
-                else timeLabel = 'Divenendo';
+                else timeLabel = 'Becoming';
             } else if (segment.startsWith('TEMPO')) {
                 type = 'TEMPO';
                 const match = segment.match(/(\d{4})\/(\d{4})/);
                 if (match) timeLabel = `${match[1].substring(2)}:00 - ${match[2].substring(2)}:00`;
-                else timeLabel = 'Temporaneo';
+                else timeLabel = 'Temporary';
             } else if (segment.match(/^FM\d{6}/)) {
                 type = 'FM';
                 const match = segment.match(/^FM(\d{2})(\d{2})(\d{2})/);
                 if (match) {
-                    timeLabel = `Da ${match[2]}:${match[3]}`;
+                    timeLabel = `From ${match[2]}:${match[3]}`;
                 }
             } else if (segment.startsWith('PROB')) {
                 type = 'PROB';
@@ -271,7 +271,7 @@ export class TafDisplay {
 
     parseClouds(str) {
         if (str.includes('CAVOK')) return 'CAVOK';
-        if (str.includes('SKC') || str.includes('NSC') || str.includes('CLR')) return 'Sereno';
+        if (str.includes('SKC') || str.includes('NSC') || str.includes('CLR')) return 'Clear';
 
         const cloudMatches = str.match(/(?:FEW|SCT|BKN|OVC)\d{3}(?:CB|TCU)?/g);
         if (cloudMatches && cloudMatches.length > 0) {
@@ -294,13 +294,13 @@ export class TafDisplay {
         const wxRegex = /(?:^|\s)([-+])?(VC)?(TS|SH|FZ|BL|dr|mi|bc)?(DZ|RA|SN|SG|IC|PL|GR|GS|UP)?(BR|FG|FU|VA|DU|SA|HZ|PY)?(PO|SQ|FC|SS|DS)?(?:$|\s)/g;
         // This is complex, let's use a simpler heuristic map for common codes
 
-        if (str.includes('TS')) phenomena.push('Temporale');
-        if (str.match(/[-+]?RA/)) phenomena.push('Pioggia');
-        if (str.match(/[-+]?SN/)) phenomena.push('Neve');
-        if (str.includes('FG')) phenomena.push('Nebbia');
-        if (str.includes('BR')) phenomena.push('Foschia');
-        if (str.match(/[-+]?SH/)) phenomena.push('Rovesci');
-        if (str.includes('GR')) phenomena.push('Grandine');
+        if (str.includes('TS')) phenomena.push('Thunderstorm');
+        if (str.match(/[-+]?RA/)) phenomena.push('Rain');
+        if (str.match(/[-+]?SN/)) phenomena.push('Snow');
+        if (str.includes('FG')) phenomena.push('Fog');
+        if (str.includes('BR')) phenomena.push('Mist');
+        if (str.match(/[-+]?SH/)) phenomena.push('Showers');
+        if (str.includes('GR')) phenomena.push('Hail');
 
         return phenomena.length > 0 ? [...new Set(phenomena)].join(', ') : '-';
     }
@@ -336,34 +336,31 @@ export class TafDisplay {
     }
 
     getWeatherIcon(period) {
-        return super.getWeatherIcon(period); // Wait, this class doesn't extend anything. Copy helper.
-    }
-
-    // Copy helpers from MetarDisplay logic (redundant but safe for isolation)
-    getWeatherIcon(period) {
+        // Wait, I should not call super.getWeatherIcon as this does not extend anything.
+        // I will copy the helper method here.
         const clouds = period.clouds || '';
         const weather = period.weather || '';
 
-        if (weather.includes('Temporale')) return '⛈️';
-        if (weather.includes('Neve')) return '❄️';
-        if (weather.includes('Pioggia') || weather.includes('Rovesci')) return '🌧️';
-        if (weather.includes('Nebbia')) return '🌫️';
-        if (weather.includes('Foschia')) return '🌁';
+        if (weather.includes('Thunderstorm')) return '⛈️';
+        if (weather.includes('Snow')) return '❄️';
+        if (weather.includes('Rain') || weather.includes('Showers')) return '🌧️';
+        if (weather.includes('Fog')) return '🌫️';
+        if (weather.includes('Mist')) return '🌁';
         if (clouds.includes('OVC')) return '☁️';
         if (clouds.includes('BKN')) return '🌥️';
-        if (clouds.includes('SCT') || clouds.includes('FEW')) return '⛅';
-        if (clouds.includes('CAVOK') || clouds.includes('Sereno')) return '☀️';
+        if (clouds.includes('SCT')) return '⛅';
+        if (clouds.includes('CAVOK') || clouds.includes('Clear')) return '☀️';
         return '🌤️';
     }
 
     getWeatherLabel(period) {
         const clouds = period.clouds || '';
         if (clouds.includes('CAVOK')) return 'CAVOK';
-        if (clouds.includes('Sereno')) return 'Sereno';
-        if (clouds.includes('OVC')) return 'Coperto';
-        if (clouds.includes('BKN')) return 'Nuvoloso';
-        if (clouds.includes('SCT')) return 'Nubi sparse';
-        if (clouds.includes('FEW')) return 'Poco nuvoloso';
+        if (clouds.includes('Clear')) return 'Clear';
+        if (clouds.includes('OVC')) return 'Overcast';
+        if (clouds.includes('BKN')) return 'Broken';
+        if (clouds.includes('SCT')) return 'Scattered';
+        if (clouds.includes('FEW')) return 'Few';
         return '';
     }
 }

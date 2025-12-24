@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VFR Flight Planner - COMPLETO v3.0.0</title>
+    <title>VFR Flight Planner - COMPLETE v3.0.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -20,23 +20,23 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="visual-tab" data-bs-toggle="tab" data-bs-target="#visual-planning"
                     type="button" role="tab" aria-controls="visual-planning" aria-selected="true">
-                    Pianificazione Visuale
+                    Visual Planning
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="flight-tab" data-bs-toggle="tab" data-bs-target="#flight-planning"
                     type="button" role="tab" aria-controls="flight-planning" aria-selected="false">
-                    Pianificazione Volo
+                    Flight Planning
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button"
-                    role="tab" aria-controls="weather" aria-selected="false">Meteo & Info</button>
+                    role="tab" aria-controls="weather" aria-selected="false">Weather & Info</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="wb-tab" data-bs-toggle="tab" data-bs-target="#weight-balance" type="button"
                     role="tab" aria-controls="weight-balance" aria-selected="false">
-                    Peso e Bilanciamento
+                    Weight & Balance
                 </button>
             </li>
         </ul>
@@ -50,59 +50,60 @@
                     <div class="col-md-4">
                         <div class="card aviation-card">
                             <div class="card-header aviation-card-header">
-                                <h5>Parametri di Volo</h5>
+                                <h5>Flight Parameters</h5>
                             </div>
                             <div class="card-body">
                                 <div class="form-group mb-3">
-                                    <label for="flightSpeed" class="form-label aviation-label">Velocità di Volo
+                                    <label for="flightSpeed" class="form-label aviation-label">Flight Speed
                                         (kts)</label>
                                     <input type="number" class="form-control aviation-input" id="flightSpeed" value="90"
                                         min="50" max="300" step="5">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label for="fuelConsumption" class="form-label aviation-label">Consumo Carburante
+                                    <label for="fuelConsumption" class="form-label aviation-label">Fuel Consumption
                                         (L/h)</label>
                                     <input type="number" class="form-control aviation-input" id="fuelConsumption"
                                         value="30" min="10" max="100" step="1">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label for="numWaypoints" class="form-label aviation-label">Numero di Waypoint
+                                    <label for="numWaypoints" class="form-label aviation-label">Number of Waypoints
                                         (2-15)</label>
                                     <input type="number" class="form-control aviation-input" id="numWaypoints" value="2"
                                         min="2" max="15">
                                 </div>
                                 <button type="button" class="btn aviation-btn-primary w-100 mb-3"
-                                    id="addWaypoints">Genera Waypoint</button>
+                                    id="addWaypoints">Generate Waypoints</button>
 
                                 <div id="waypointInputs" class="mb-3"></div>
 
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="includeAlternate">
                                     <label class="form-check-label aviation-label" for="includeAlternate">
-                                        Includi Aeroporto Alternato
+                                        Include Alternate Airport
                                     </label>
                                 </div>
 
                                 <div id="alternateSection" style="display: none;">
                                     <div class="form-group mb-3">
-                                        <label for="numAlternateWaypoints" class="form-label aviation-label">Waypoint
-                                            Alternati
+                                        <label for="numAlternateWaypoints" class="form-label aviation-label">Alternate
+                                            Waypoints
                                             (2-10)</label>
                                         <input type="number" class="form-control aviation-input"
                                             id="numAlternateWaypoints" value="2" min="2" max="10">
                                     </div>
                                     <button type="button" class="btn aviation-btn-secondary w-100 mb-3"
-                                        id="addAlternateWaypoints">Genera Waypoint Alternati</button>
+                                        id="addAlternateWaypoints">Generate Alternate Waypoints</button>
                                     <div id="alternateInputs" class="mb-3"></div>
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <button type="button" class="btn aviation-btn-primary" id="calculateFlight">Calcola
-                                        Volo</button>
-                                    <button type="button" class="btn aviation-btn-outline" id="resetPlan">Resetta
-                                        Piano</button>
+                                    <button type="button" class="btn aviation-btn-primary"
+                                        id="calculateFlight">Calculate
+                                        Flight</button>
+                                    <button type="button" class="btn aviation-btn-outline" id="resetPlan">Reset
+                                        Plan</button>
                                     <button type="button" class="btn aviation-btn-success" id="exportPlan"
-                                        disabled>Esporta in Excel</button>
+                                        disabled>Export to Excel</button>
                                 </div>
                             </div>
                         </div>
@@ -112,7 +113,7 @@
                     <div class="col-md-8">
                         <div class="card aviation-card mb-3">
                             <div class="card-header aviation-card-header">
-                                <h5>Trip Principale</h5>
+                                <h5>Main Trip</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -136,23 +137,23 @@
                                     <div class="row">
                                         <div class="col-6"><strong>Trip Fuel:</strong></div>
                                         <div class="col-6 text-end"><span class="aviation-fuel-value" id="tripFuel">--
-                                                litri</span></div>
+                                                liters</span></div>
                                     </div>
                                     <div class="row">
                                         <div class="col-6"><strong>Contingency Fuel:</strong></div>
                                         <div class="col-6 text-end"><span class="aviation-fuel-value"
-                                                id="contingencyFuel">-- litri</span></div>
+                                                id="contingencyFuel">-- liters</span></div>
                                     </div>
                                     <div class="row">
                                         <div class="col-6"><strong>Reserve Fuel:</strong></div>
                                         <div class="col-6 text-end"><span class="aviation-fuel-value"
-                                                id="reserveFuel">-- litri</span></div>
+                                                id="reserveFuel">-- liters</span></div>
                                     </div>
                                     <hr>
                                     <div class="row">
                                         <div class="col-6"><strong>Total Fuel:</strong></div>
                                         <div class="col-6 text-end"><span class="aviation-total-fuel" id="totalFuel">--
-                                                litri</span></div>
+                                                liters</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -160,7 +161,7 @@
 
                         <div class="card aviation-card" id="alternateCard" style="display: none;">
                             <div class="card-header aviation-card-header">
-                                <h5>Aeroporto Alternato</h5>
+                                <h5>Alternate Airport</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -184,7 +185,7 @@
                                     <div class="row">
                                         <div class="col-6"><strong>Alternate Trip Fuel:</strong></div>
                                         <div class="col-6 text-end"><span class="aviation-fuel-value"
-                                                id="alternateTripFuel">-- litri</span></div>
+                                                id="alternateTripFuel">-- liters</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -199,13 +200,13 @@
                     <div class="col-md-12">
                         <div class="card aviation-card">
                             <div class="card-header aviation-card-header">
-                                <h5>Selezione Aeromobile</h5>
+                                <h5>Aircraft Selection</h5>
                             </div>
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <label for="aircraftSelect" class="form-label aviation-label">Seleziona
-                                            Aeromobile:</label>
+                                        <label for="aircraftSelect" class="form-label aviation-label">Select
+                                            Aircraft:</label>
                                         <select class="form-control aviation-input" id="aircraftSelect">
                                             <option value="TB9">TB9</option>
                                             <option value="TB10">TB10</option>
@@ -218,7 +219,7 @@
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="customModeCheckbox">
                                             <label class="form-check-label aviation-label" for="customModeCheckbox">
-                                                Abilita Modalità Personalizzata (Modifica Grafico e Bracci)
+                                                Enable Custom Mode (Edit Chart and Arms)
                                             </label>
                                         </div>
                                     </div>
@@ -232,15 +233,15 @@
                     <div class="col-md-8">
                         <div class="card aviation-card">
                             <div class="card-header aviation-card-header">
-                                <h5>Grafico Peso e Bilanciamento</h5>
+                                <h5>Weight & Balance Chart</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container" style="position: relative; height: 400px;">
                                     <canvas id="wbChart"></canvas>
                                 </div>
                                 <div class="mt-3">
-                                    <button type="button" class="btn aviation-btn-secondary" id="updateWBRange">Aggiorna
-                                        Range P&B</button>
+                                    <button type="button" class="btn aviation-btn-secondary" id="updateWBRange">Update
+                                        W&B Range</button>
                                     <div id="wbStatus" class="mt-2"></div>
                                 </div>
                             </div>
@@ -249,26 +250,26 @@
                     <div class="col-md-4">
                         <div class="card aviation-card">
                             <div class="card-header aviation-card-header">
-                                <h5>Dati Peso e Bilanciamento</h5>
+                                <h5>Weight & Balance Data</h5>
                             </div>
                             <div class="card-body">
                                 <table class="table aviation-table" id="wbTable">
                                     <thead>
                                         <tr>
-                                            <th>Elemento</th>
-                                            <th id="wbWeightHeader">Peso[kg]</th>
-                                            <th id="wbArmHeader">Braccio[m]</th>
-                                            <th>Momento</th>
+                                            <th>Item</th>
+                                            <th id="wbWeightHeader">Weight[kg]</th>
+                                            <th id="wbArmHeader">Arm[m]</th>
+                                            <th>Moment</th>
                                         </tr>
                                     </thead>
                                     <tbody id="wbTableBody">
                                     </tbody>
                                 </table>
                                 <div class="d-grid gap-2 mt-3">
-                                    <button type="button" class="btn aviation-btn-primary" id="calculateWB">Calcola
-                                        Peso & Bilanciamento</button>
-                                    <button type="button" class="btn aviation-btn-secondary" id="resetWB">Resetta Peso &
-                                        Bilanciamento</button>
+                                    <button type="button" class="btn aviation-btn-primary" id="calculateWB">Calculate
+                                        Weight & Balance</button>
+                                    <button type="button" class="btn aviation-btn-secondary" id="resetWB">Reset Weight &
+                                        Balance</button>
                                 </div>
                             </div>
                         </div>
@@ -284,19 +285,19 @@
                     <div class="col-md-3">
                         <div class="card aviation-card mb-3">
                             <div class="card-header aviation-card-header">
-                                <h5>Controlli</h5>
+                                <h5>Controls</h5>
                             </div>
                             <div class="card-body">
                                 <div class="form-group mb-3">
-                                    <label for="visualFlightSpeed" class="form-label aviation-label">Velocità di Volo
+                                    <label for="visualFlightSpeed" class="form-label aviation-label">Flight Speed
                                         (kts)</label>
                                     <input type="number" class="form-control aviation-input" id="visualFlightSpeed"
                                         value="90" min="50" max="300" step="5">
                                 </div>
 
                                 <div class="form-group mb-3">
-                                    <label for="visualFuelConsumption" class="form-label aviation-label">Consumo
-                                        Carburante (L/h)</label>
+                                    <label for="visualFuelConsumption" class="form-label aviation-label">Fuel
+                                        Consumption (L/h)</label>
                                     <input type="number" class="form-control aviation-input" id="visualFuelConsumption"
                                         value="30" min="10" max="100" step="1">
                                 </div>
@@ -305,59 +306,59 @@
 
                         <div class="card aviation-card mb-3">
                             <div class="card-header aviation-card-header">
-                                <h5>Waypoint Rotta Principale</h5>
+                                <h5>Main Route Waypoints</h5>
                             </div>
                             <div class="card-body">
                                 <div id="visualWaypointList" class="list-group mb-3" style="min-height: 150px;">
-                                    <div class="text-center text-muted p-3">Attiva la modalità waypoint e clicca sulla
-                                        mappa</div>
+                                    <div class="text-center text-muted p-3">Activate waypoint mode and click on the
+                                        map</div>
                                 </div>
                                 <button type="button" class="btn aviation-btn-secondary w-100"
-                                    id="clearVisualPlan">Cancella Rotta Principale</button>
+                                    id="clearVisualPlan">Clear Main Route</button>
                             </div>
                         </div>
 
                         <div class="card aviation-card mb-3">
                             <div class="card-header aviation-card-header" style="background-color: #ffc107;">
-                                <h5>Waypoint Rotta Alternata</h5>
+                                <h5>Alternate Route Waypoints</h5>
                             </div>
                             <div class="card-body">
                                 <div id="visualAlternateWaypointList" class="list-group mb-3"
                                     style="min-height: 150px;">
-                                    <div class="text-center text-muted p-3">Passa alla modalità Rotta Alternata</div>
+                                    <div class="text-center text-muted p-3">Switch to Alternate Route Mode</div>
                                 </div>
-                                <button type="button" class="btn btn-warning w-100" id="clearAlternatePlan">Cancella
-                                    Rotta Alternata</button>
+                                <button type="button" class="btn btn-warning w-100" id="clearAlternatePlan">Clear
+                                    Alternate Route</button>
                             </div>
                         </div>
 
                         <div class="card aviation-card">
                             <div class="card-header aviation-card-header">
-                                <h5>Piano di Volo</h5>
+                                <h5>Flight Plan</h5>
                             </div>
                             <div class="card-body">
                                 <button type="button" class="btn aviation-btn-primary w-100 mb-2"
-                                    id="calculateVisualPlan">Calcola Piano di Volo</button>
+                                    id="calculateVisualPlan">Calculate Flight Plan</button>
                                 <button type="button" class="btn aviation-btn-success w-100 mb-2" id="exportVisualPlan"
-                                    disabled>Esporta in Excel</button>
+                                    disabled>Export to Excel</button>
 
                                 <div id="visualFlightSummary" class="mt-3" style="display: none;">
                                     <hr>
-                                    <h6 class="mb-3">Rotta Principale</h6>
+                                    <h6 class="mb-3">Main Route</h6>
                                     <div class="aviation-fuel-summary">
                                         <div class="row">
-                                            <div class="col-7"><strong>Distanza Totale:</strong></div>
+                                            <div class="col-7"><strong>Total Distance:</strong></div>
                                             <div class="col-5 text-end"><span id="visualTotalDistance">--
                                                     NM</span>
                                             </div>
                                         </div>
                                         <div class="row">
-                                            <div class="col-7"><strong>Tempo di Volo:</strong></div>
+                                            <div class="col-7"><strong>Flight Time:</strong></div>
                                             <div class="col-5 text-end"><span id="visualFlightTime">--
                                                     min</span></div>
                                         </div>
                                         <div class="row">
-                                            <div class="col-7"><strong>Carburante Viaggio:</strong></div>
+                                            <div class="col-7"><strong>Trip Fuel:</strong></div>
                                             <div class="col-5 text-end"><span class="aviation-fuel-value"
                                                     id="visualTripFuel">-- L</span></div>
                                         </div>
@@ -367,42 +368,42 @@
                                                     id="visualContingency">-- L</span></div>
                                         </div>
                                         <div class="row">
-                                            <div class="col-7"><strong>Riserva:</strong></div>
+                                            <div class="col-7"><strong>Reserve:</strong></div>
                                             <div class="col-5 text-end"><span class="aviation-fuel-value"
                                                     id="visualReserve">-- L</span></div>
                                         </div>
                                         <hr>
                                         <div class="row">
-                                            <div class="col-7"><strong>Carburante Totale:</strong></div>
+                                            <div class="col-7"><strong>Total Fuel:</strong></div>
                                             <div class="col-5 text-end"><span class="aviation-total-fuel"
                                                     id="visualTotalFuel">-- L</span></div>
                                         </div>
                                     </div>
 
-                                    <!-- Riepilogo rotta alternata (mostrato solo se esiste) -->
+                                    <!-- Alternate route summary (shown only if exists) -->
                                     <div id="visualAlternateSummary" style="display: none;">
                                         <hr>
-                                        <h6 class="mb-3" style="color: #ffc107;">Rotta Alternata</h6>
+                                        <h6 class="mb-3" style="color: #ffc107;">Alternate Route</h6>
                                         <div class="aviation-fuel-summary">
                                             <div class="row">
-                                                <div class="col-7"><strong>Distanza Alternata:</strong></div>
+                                                <div class="col-7"><strong>Alternate Distance:</strong></div>
                                                 <div class="col-5 text-end"><span id="visualAlternateDistance">--
                                                         NM</span>
                                                 </div>
                                             </div>
                                             <div class="row">
-                                                <div class="col-7"><strong>Tempo Alternato:</strong></div>
+                                                <div class="col-7"><strong>Alternate Time:</strong></div>
                                                 <div class="col-5 text-end"><span id="visualAlternateTime">--
                                                         min</span></div>
                                             </div>
                                             <div class="row">
-                                                <div class="col-7"><strong>Carburante Alternato:</strong></div>
+                                                <div class="col-7"><strong>Alternate Fuel:</strong></div>
                                                 <div class="col-5 text-end"><span class="aviation-fuel-value"
                                                         id="visualAlternateFuel">-- L</span></div>
                                             </div>
                                             <hr>
                                             <div class="row">
-                                                <div class="col-7"><strong>Carburante Totale Combinato:</strong></div>
+                                                <div class="col-7"><strong>Combined Total Fuel:</strong></div>
                                                 <div class="col-5 text-end"><span class="aviation-total-fuel"
                                                         id="visualCombinedTotalFuel">-- L</span></div>
                                             </div>
@@ -413,24 +414,24 @@
                         </div>
                     </div>
 
-                    <!-- Pannello Destro - Mappa -->
+                    <!-- Right Panel - Map -->
                     <div class="col-md-9">
                         <div class="card aviation-card mb-3">
                             <div
                                 class="card-header aviation-card-header d-flex justify-content-between align-items-center">
-                                <h5>Mappa di Volo Visuale</h5>
-                                <button class="btn btn-sm btn-light" id="exportMapImage">📸 Salva Immagine
-                                    Mappa</button>
+                                <h5>Visual Flight Map</h5>
+                                <!-- Export button temporarily hidden -->
+                                <!-- <button class="btn btn-sm btn-light" id="exportMapImage">📸 Save Map Image</button> -->
                             </div>
                             <div class="card-body p-0">
                                 <div id="map" style="height: 700px; width: 100%;"></div>
                             </div>
                         </div>
 
-                        <!-- Tabella Dati di Volo -->
+                        <!-- Flight Data Table -->
                         <div class="card aviation-card" id="visualFlightDataCard" style="display: none;">
                             <div class="card-header aviation-card-header">
-                                <h5>Dettagli Piano di Volo</h5>
+                                <h5>Flight Plan Details</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -452,13 +453,13 @@
 
                                 <div class="aviation-fuel-summary mt-3">
                                     <div class="row">
-                                        <div class="col-6"><strong>Distanza Totale:</strong></div>
+                                        <div class="col-6"><strong>Total Distance:</strong></div>
                                         <div class="col-6 text-end"><span id="visualTableTotalDistance">--
                                                 NM</span>
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-6"><strong>Tempo di Volo Totale:</strong></div>
+                                        <div class="col-6"><strong>Total Flight Time:</strong></div>
                                         <div class="col-6 text-end"><span id="visualTableTotalTime">--
                                                 min</span></div>
                                     </div>
@@ -466,10 +467,10 @@
                             </div>
                         </div>
 
-                        <!-- Tabella Dati Volo Alternato -->
+                        <!-- Alternate Flight Data Table -->
                         <div class="card aviation-card" id="visualAlternateFlightDataCard" style="display: none;">
                             <div class="card-header aviation-card-header" style="background-color: #ffc107;">
-                                <h5>Dettagli Piano di Volo Alternato</h5>
+                                <h5>Alternate Flight Plan Details</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -491,13 +492,13 @@
 
                                 <div class="aviation-fuel-summary mt-3">
                                     <div class="row">
-                                        <div class="col-6"><strong>Distanza Totale:</strong></div>
+                                        <div class="col-6"><strong>Total Distance:</strong></div>
                                         <div class="col-6 text-end"><span id="visualAlternateTotalDistance">--
                                                 NM</span>
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-6"><strong>Tempo di Volo Totale:</strong></div>
+                                        <div class="col-6"><strong>Total Flight Time:</strong></div>
                                         <div class="col-6 text-end"><span id="visualAlternateTotalTime">--
                                                 min</span></div>
                                     </div>
@@ -516,17 +517,16 @@
                     <div class="col-md-4">
                         <div class="card aviation-card mb-4">
                             <div class="card-header aviation-card-header">
-                                <h5>Ricerca Aeroporto</h5>
+                                <h5>Airport Search</h5>
                             </div>
                             <div class="card-body">
                                 <div class="form-group mb-3">
-                                    <label for="weatherIcao" class="form-label aviation-label">Codice ICAO
-                                        Aeroporto</label>
+                                    <label for="weatherIcao" class="form-label aviation-label">Airport ICAO Code</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control aviation-input text-uppercase"
-                                            id="weatherIcao" placeholder="es. LIBD">
+                                            id="weatherIcao" placeholder="e.g. LIBD">
                                         <button class="btn aviation-btn-primary" type="button"
-                                            id="searchWeather">Cerca</button>
+                                            id="searchWeather">Search</button>
                                     </div>
                                 </div>
                                 <div id="weatherStatus" class="mt-2"></div>
@@ -565,7 +565,7 @@
                             <!-- Runways -->
                             <div class="card aviation-card mb-4">
                                 <div class="card-header aviation-card-header">
-                                    <h5>Piste</h5>
+                                    <h5>Runways</h5>
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive">
@@ -573,9 +573,9 @@
                                             <thead>
                                                 <tr>
                                                     <th>ID</th>
-                                                    <th>Dimensioni</th>
-                                                    <th>Superficie</th>
-                                                    <th>Luci</th>
+                                                    <th>Dimensions</th>
+                                                    <th>Surface</th>
+                                                    <th>Lights</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="runwayTableBody"></tbody>
@@ -589,16 +589,16 @@
                                 <div class="col-md-6 mb-4">
                                     <div class="card aviation-card h-100">
                                         <div class="card-header aviation-card-header">
-                                            <h5>Frequenze</h5>
+                                            <h5>Frequencies</h5>
                                         </div>
                                         <div class="card-body p-0">
                                             <div class="table-responsive">
                                                 <table class="table aviation-table mb-0">
                                                     <thead>
                                                         <tr>
-                                                            <th>Tipo</th>
-                                                            <th>Frequenza</th>
-                                                            <th>Descrizione</th>
+                                                            <th>Type</th>
+                                                            <th>Frequency</th>
+                                                            <th>Description</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="frequencyTableBody"></tbody>
@@ -610,7 +610,7 @@
                                 <div class="col-md-6 mb-4">
                                     <div class="card aviation-card h-100">
                                         <div class="card-header aviation-card-header">
-                                            <h5>Aeroporti Vicini</h5>
+                                            <h5>Nearby Airports</h5>
                                         </div>
                                         <div class="card-body p-0">
                                             <div class="list-group list-group-flush" id="nearbyAirportsList">
@@ -661,7 +661,7 @@
                         <div class="spinner-border aviation-spinner" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-2 aviation-text">Elaborazione in corso...</p>
+                        <p class="mt-2 aviation-text">Processing...</p>
                     </div>
                 </div>
             </div>
@@ -677,13 +677,12 @@
                             aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="aviation-text">Modifica i punti dell'envelope:</p>
+                        <p class="aviation-text">Edit envelope points:</p>
                         <div id="wbRangeInputs"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn aviation-btn-secondary"
-                            data-bs-dismiss="modal">Annulla</button>
-                        <button type="button" class="btn aviation-btn-primary" id="saveWBRange">Salva</button>
+                        <button type="button" class="btn aviation-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn aviation-btn-primary" id="saveWBRange">Save</button>
                     </div>
                 </div>
             </div>
@@ -700,13 +699,12 @@
                             aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="aviation-text">Modifica i valori dei bracci:</p>
+                        <p class="aviation-text">Edit arm values:</p>
                         <div id="customArmsInputs"></div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn aviation-btn-secondary"
-                            data-bs-dismiss="modal">Annulla</button>
-                        <button type="button" class="btn aviation-btn-primary" id="saveCustomArms">Salva</button>
+                        <button type="button" class="btn aviation-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn aviation-btn-primary" id="saveCustomArms">Save</button>
                     </div>
                 </div>
             </div>
@@ -731,10 +729,10 @@
     <!-- SunCalc for accurate daylight calculations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
 
-    <!-- html-to-image (modern replacement for dom-to-image with better CORS handling) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <!-- leaflet-image for map capture (specifically designed for Leaflet) -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-image@0.4.0/leaflet-image.js"></script>
 
-    <script type="module" src="js/main.js?v=5.9"></script>
+    <script type="module" src="js/main.js?v=6.0"></script>
 </body>
 
 </html>

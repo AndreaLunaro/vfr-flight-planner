@@ -9,60 +9,60 @@ export class NotamDisplay {
         // NOTAM Q-code decoding tables
         this.qCodes = {
             // First letter - Subject
-            'A': 'Aerodrome', 'C': 'Centro de control', 'F': 'Facilidades',
-            'I': 'ILS/LOC/VOR', 'L': 'Iluminación', 'M': 'Movimiento',
-            'N': 'Navegación', 'O': 'Obstáculo', 'P': 'Procedimientos',
-            'R': 'Espacio aéreo', 'S': 'Servicio', 'T': 'Comunicaciones',
-            'W': 'Navegación/Alerta',
+            'A': 'Aerodrome', 'C': 'Center', 'F': 'Facilities',
+            'I': 'ILS/LOC/VOR', 'L': 'Lighting', 'M': 'Movement',
+            'N': 'Navigation', 'O': 'Obstacle', 'P': 'Procedures',
+            'R': 'Airspace', 'S': 'Service', 'T': 'Communications',
+            'W': 'Warning',
             // Second letter - Condition
-            'A': 'Disponible', 'B': 'Limitaciones', 'C': 'Cerrado',
-            'H': 'Peligro', 'K': 'Operaciones', 'L': 'Iluminado',
-            'O': 'Operacional', 'P': 'Operativo parcial', 'R': 'Restaurado',
-            'S': 'Requerido', 'U': 'No disponible', 'W': 'Trabajo en progreso'
+            'A': 'Available', 'B': 'Limitations', 'C': 'Closed',
+            'H': 'Hazard', 'K': 'Operations', 'L': 'Lighted',
+            'O': 'Operational', 'P': 'Partially operative', 'R': 'Restored',
+            'S': 'Required', 'U': 'Unavailable', 'W': 'Work in progress'
         };
 
         // Weather/obstacle abbreviations
         this.abbreviations = {
-            'AD': 'Aeródromo', 'AGL': 'Sobre el nivel del suelo', 'AMSL': 'Sobre el nivel del mar',
-            'AP': 'Aeropuerto', 'APRX': 'Aproximadamente', 'ATC': 'Control de tráfico aéreo',
-            'AUTH': 'Autorizado', 'AVBL': 'Disponible', 'BTN': 'Entre',
-            'CBND': 'Combinado', 'CL': 'Centro de línea', 'CLSD': 'Cerrado',
-            'CMB': 'Subir', 'CNL': 'Cancelado', 'COORD': 'Coordinación',
-            'CTR': 'Zona de control', 'DEP': 'Partida', 'DME': 'Equipo medidor de distancia',
-            'EMERG': 'Emergencia', 'EQPT': 'Equipo', 'EST': 'Estimado',
-            'EXC': 'Excepto', 'FLT': 'Vuelo', 'FM': 'Desde',
-            'FNA': 'Aproximación final', 'FREQ': 'Frecuencia', 'FT': 'Pies',
-            'GND': 'Tierra', 'GP': 'Glide Path', 'GPS': 'Sistema de posicionamiento global',
-            'GS': 'Glide Slope', 'H24': '24 horas', 'HEL': 'Helicóptero',
-            'HGT': 'Altura', 'HR': 'Hora', 'HZ': 'Hertz',
-            'IAF': 'Fijo de aproximación inicial', 'IAP': 'Procedimiento de aproximación por instrumentos',
-            'IFR': 'Reglas de vuelo por instrumentos', 'ILS': 'Sistema de aterrizaje por instrumentos',
-            'IMC': 'Condiciones meteorológicas de vuelo por instrumentos',
-            'INFO': 'Información', 'INTL': 'Internacional', 'INOP': 'Inoperativo',
-            'KT': 'Nudos', 'LDG': 'Aterrizaje', 'LGT': 'Iluminado/Luz',
-            'LOC': 'Localizador', 'LONG': 'Longitud', 'M': 'Metros',
-            'MAINT': 'Mantenimiento', 'MAX': 'Máximo', 'MET': 'Meteorológico',
-            'MHZ': 'Megahertz', 'MIN': 'Mínimo/Minutos', 'MNM': 'Mínimo',
-            'MON': 'Lunes', 'MSA': 'Altitud mínima de sector', 'NAV': 'Navegación',
-            'NDB': 'Radiofaro no direccional', 'NIL': 'Ninguno', 'NM': 'Millas náuticas',
-            'NOF': 'Oficina internacional NOTAM', 'OBS': 'Obstáculo/Observación',
-            'OPN': 'Abierto', 'OPR': 'Operación', 'PAPI': 'Indicador de trayectoria de aproximación de precisión',
-            'PAX': 'Pasajeros', 'PERM': 'Permanente', 'PJE': 'Paracaidismo',
-            'PPR': 'Permiso previo requerido', 'PROC': 'Procedimiento',
-            'PSN': 'Posición', 'RAD': 'Radio', 'RCL': 'Línea central de pista',
-            'REF': 'Referencia', 'RMK': 'Observación', 'RNAV': 'Navegación de área',
-            'RTE': 'Ruta', 'RVR': 'Alcance visual en pista', 'RWY': 'Pista',
-            'SER': 'Servicio', 'SFC': 'Superficie', 'SID': 'Salida instrumental estándar',
-            'SR': 'Amanecer', 'SS': 'Atardecer', 'SSR': 'Radar secundario de vigilancia',
-            'STAR': 'Llegada estándar por instrumentos', 'SVC': 'Servicio',
-            'TAR': 'Radar de tránsito de aeródromo', 'TDZ': 'Zona de toma de contacto',
-            'TFC': 'Tráfico', 'THR': 'Umbral', 'TIL': 'Hasta',
-            'TMA': 'Área de control terminal', 'TWR': 'Torre', 'TWY': 'Calle de rodaje',
-            'U/S': 'Fuera de servicio', 'UFN': 'Hasta nuevo aviso', 'UNLTD': 'Ilimitado',
-            'UNL': 'Ilimitado', 'UTC': 'Tiempo Universal Coordinado', 'VFR': 'Reglas de vuelo visual',
-            'VIS': 'Visibilidad', 'VMC': 'Condiciones meteorológicas visuales',
-            'VOR': 'Radiofaro omnidireccional VHF', 'WEF': 'Con efecto desde',
-            'WI': 'Dentro de', 'WIP': 'Trabajo en progreso', 'WKN': 'Debilitándose'
+            'AD': 'Aerodrome', 'AGL': 'Above Ground Level', 'AMSL': 'Above Mean Sea Level',
+            'AP': 'Airport', 'APRX': 'Approximately', 'ATC': 'Air Traffic Control',
+            'AUTH': 'Authorized', 'AVBL': 'Available', 'BTN': 'Between',
+            'CBND': 'Combined', 'CL': 'Center Line', 'CLSD': 'Closed',
+            'CMB': 'Climb', 'CNL': 'Cancelled', 'COORD': 'Coordinated',
+            'CTR': 'Control Zone', 'DEP': 'Departure', 'DME': 'Distance Measuring Equipment',
+            'EMERG': 'Emergency', 'EQPT': 'Equipment', 'EST': 'Estimated',
+            'EXC': 'Except', 'FLT': 'Flight', 'FM': 'From',
+            'FNA': 'Final Approach', 'FREQ': 'Frequency', 'FT': 'Feet',
+            'GND': 'Ground', 'GP': 'Glide Path', 'GPS': 'Global Positioning System',
+            'GS': 'Glide Slope', 'H24': '24 Hours', 'HEL': 'Helicopter',
+            'HGT': 'Height', 'HR': 'Hour', 'HZ': 'Hertz',
+            'IAF': 'Initial Approach Fix', 'IAP': 'Instrument Approach Procedure',
+            'IFR': 'Instrument Flight Rules', 'ILS': 'Instrument Landing System',
+            'IMC': 'Instrument Meteorological Conditions',
+            'INFO': 'Information', 'INTL': 'International', 'INOP': 'Inoperative',
+            'KT': 'Knots', 'LDG': 'Landing', 'LGT': 'Lighted/Light',
+            'LOC': 'Localizer', 'LONG': 'Longitude', 'M': 'Meters',
+            'MAINT': 'Maintenance', 'MAX': 'Maximum', 'MET': 'Meteorological',
+            'MHZ': 'Megahertz', 'MIN': 'Minimum/Minutes', 'MNM': 'Minimum',
+            'MON': 'Monday', 'MSA': 'Minimum Sector Altitude', 'NAV': 'Navigation',
+            'NDB': 'Non-Directional Beacon', 'NIL': 'None', 'NM': 'Nautical Miles',
+            'NOF': 'International NOTAM Office', 'OBS': 'Obstacle/Observation',
+            'OPN': 'Open', 'OPR': 'Operating', 'PAPI': 'Precision Approach Path Indicator',
+            'PAX': 'Passengers', 'PERM': 'Permanent', 'PJE': 'Parachute Jumping Exercise',
+            'PPR': 'Prior Permission Required', 'PROC': 'Procedure',
+            'PSN': 'Position', 'RAD': 'Radio', 'RCL': 'Runway Center Line',
+            'REF': 'Reference', 'RMK': 'Remark', 'RNAV': 'Area Navigation',
+            'RTE': 'Route', 'RVR': 'Runway Visual Range', 'RWY': 'Runway',
+            'SER': 'Service', 'SFC': 'Surface', 'SID': 'Standard Instrument Departure',
+            'SR': 'Sunrise', 'SS': 'Sunset', 'SSR': 'Secondary Surveillance Radar',
+            'STAR': 'Standard Terminal Arrival Route', 'SVC': 'Service',
+            'TAR': 'Terminal Area Radar', 'TDZ': 'Touchdown Zone',
+            'TFC': 'Traffic', 'THR': 'Threshold', 'TIL': 'Until',
+            'TMA': 'Terminal Control Area', 'TWR': 'Tower', 'TWY': 'Taxiway',
+            'U/S': 'Unserviceable', 'UFN': 'Until Further Notice', 'UNLTD': 'Unlimited',
+            'UNL': 'Unlimited', 'UTC': 'Coordinated Universal Time', 'VFR': 'Visual Flight Rules',
+            'VIS': 'Visibility', 'VMC': 'Visual Meteorological Conditions',
+            'VOR': 'VHF Omnidirectional Radio Range', 'WEF': 'With Effect From',
+            'WI': 'Within', 'WIP': 'Work In Progress', 'WKN': 'Weakening'
         };
     }
 
@@ -89,9 +89,9 @@ export class NotamDisplay {
                     </div>
                     <div class="card-body text-center py-4">
                         <div class="text-muted">
-                            <p class="mb-2">⚠️ Nessun NOTAM disponibile</p>
-                            <small>I dati NOTAM potrebbero non essere accessibili per questo aeroporto.<br>
-                            Consulta sempre le fonti ufficiali prima del volo.</small>
+                            <p class="mb-2">⚠️ No NOTAMs available</p>
+                            <small>NOTAM data might not be accessible for this airport.<br>
+                            Always check official sources before flight.</small>
                         </div>
                         <div class="mt-3">
                             <a href="https://www.deskaeronautico.it/mappa/" target="_blank" class="btn btn-outline-primary btn-sm me-2">
@@ -116,8 +116,8 @@ export class NotamDisplay {
                 <div class="card-header aviation-card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📢 NOTAM ${icao || ''}</h5>
                     <div>
-                        ${source ? `<span class="badge bg-success text-white me-2">Fonte: ${source}</span>` : ''}
-                        <span class="badge bg-light text-dark">${notamArray.length} attivi</span>
+                        ${source ? `<span class="badge bg-success text-white me-2">Source: ${source}</span>` : ''}
+                        <span class="badge bg-light text-dark">${notamArray.length} active</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -142,12 +142,12 @@ export class NotamDisplay {
             <div class="card aviation-card">
                 <div class="card-header aviation-card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📢 NOTAM ${icao || ''}</h5>
-                    <span class="badge bg-warning text-dark">API non disponibile</span>
+                    <span class="badge bg-warning text-dark">API Unavailable</span>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info mb-3">
-                        <strong>ℹ️ Informazione:</strong> I dati NOTAM non sono accessibili tramite API pubblica.<br>
-                        Utilizza una delle seguenti fonti ufficiali per consultare i NOTAM per <strong>${icao}</strong>:
+                        <strong>ℹ️ Information:</strong> NOTAM data is not accessible via public API.<br>
+                        Use one of the following official sources to check NOTAMs for <strong>${icao}</strong>:
                     </div>
                     
                     <div class="row g-2">
@@ -162,8 +162,8 @@ export class NotamDisplay {
                     </div>
                     
                     <div class="mt-3 text-center text-muted small">
-                        <p class="mb-0">💡 <strong>Suggerimento:</strong> Per aeroporti italiani, usa <strong>Desk Aeronautico</strong> o <strong>ENAV</strong>.<br>
-                        Per aeroporti USA, usa <strong>FAA PilotWeb</strong> o <strong>FAA NOTAM Search</strong>.</p>
+                        <p class="mb-0">💡 <strong>Tip:</strong> For Italian airports, use <strong>Desk Aeronautico</strong> or <strong>ENAV</strong>.<br>
+                        For US airports, use <strong>FAA PilotWeb</strong> or <strong>FAA NOTAM Search</strong>.</p>
                     </div>
                 </div>
             </div>
@@ -194,40 +194,40 @@ export class NotamDisplay {
                 <div class="notam-body ${isExpanded ? 'expanded' : ''}">
                     <!-- Decoded Information -->
                     <div class="notam-decoded mb-3">
-                        <h6 class="text-primary mb-2">📖 Interpretazione</h6>
+                        <h6 class="text-primary mb-2">📖 Interpretation</h6>
                         <div class="notam-description">${parsed.decodedDescription}</div>
                     </div>
                     
                     <!-- Parsed Fields -->
                     <div class="notam-parsed">
-                        <h6 class="text-muted mb-2">📋 Dettagli</h6>
+                        <h6 class="text-muted mb-2">📋 Details</h6>
                         ${parsed.location ? `
                         <div class="notam-parsed-row">
-                            <span class="notam-parsed-label">📍 Aeroporto</span>
+                            <span class="notam-parsed-label">📍 Airport</span>
                             <span class="notam-parsed-value">${parsed.location}</span>
                         </div>
                         ` : ''}
                         ${parsed.qCode ? `
                         <div class="notam-parsed-row">
-                            <span class="notam-parsed-label">🏷️ Codice Q</span>
+                            <span class="notam-parsed-label">🏷️ Q-Code</span>
                             <span class="notam-parsed-value">${parsed.qCode}</span>
                         </div>
                         ` : ''}
                         ${parsed.validity ? `
                         <div class="notam-parsed-row">
-                            <span class="notam-parsed-label">📅 Validità</span>
+                            <span class="notam-parsed-label">📅 Validity</span>
                             <span class="notam-parsed-value">${parsed.validity}</span>
                         </div>
                         ` : ''}
                         ${parsed.schedule ? `
                         <div class="notam-parsed-row">
-                            <span class="notam-parsed-label">🕐 Orario</span>
+                            <span class="notam-parsed-label">🕐 Schedule</span>
                             <span class="notam-parsed-value">${parsed.schedule}</span>
                         </div>
                         ` : ''}
                         ${parsed.altitude ? `
                         <div class="notam-parsed-row">
-                            <span class="notam-parsed-label">📐 Altitudine</span>
+                            <span class="notam-parsed-label">📐 Altitude</span>
                             <span class="notam-parsed-value">${parsed.altitude}</span>
                         </div>
                         ` : ''}
@@ -235,7 +235,7 @@ export class NotamDisplay {
                     
                     <!-- Raw NOTAM -->
                     <div class="mt-3">
-                        <label class="form-label text-muted small text-uppercase">NOTAM Originale</label>
+                        <label class="form-label text-muted small text-uppercase">Raw NOTAM</label>
                         <div class="notam-raw">${notam.raw || notam}</div>
                     </div>
                 </div>
@@ -280,8 +280,8 @@ export class NotamDisplay {
         let validityShort = '';
         if (validityMatch) {
             const start = this.parseNotamDate(validityMatch[1]);
-            const end = validityMatch[2] === 'PERM' ? 'Permanente' : this.parseNotamDate(validityMatch[2]);
-            validity = `Dal ${start} al ${end}`;
+            const end = validityMatch[2] === 'PERM' ? 'Permanent' : this.parseNotamDate(validityMatch[2]);
+            validity = `From ${start} to ${end}`;
             validityShort = `${this.parseNotamDateShort(validityMatch[1])} - ${validityMatch[2] === 'PERM' ? 'PERM' : this.parseNotamDateShort(validityMatch[2])}`;
         }
 
@@ -297,8 +297,8 @@ export class NotamDisplay {
         const ceilingMatch = raw.match(/G\)\s*(\w+)/);
         let altitude = '';
         if (floorMatch || ceilingMatch) {
-            const floor = floorMatch ? this.decodeAltitude(floorMatch[1]) : 'Superficie';
-            const ceiling = ceilingMatch ? this.decodeAltitude(ceilingMatch[1]) : 'Illimitato';
+            const floor = floorMatch ? this.decodeAltitude(floorMatch[1]) : 'Surface';
+            const ceiling = ceilingMatch ? this.decodeAltitude(ceilingMatch[1]) : 'Unlimited';
             altitude = `${floor} - ${ceiling}`;
         }
 
@@ -339,14 +339,14 @@ export class NotamDisplay {
             const condition = code.substring(3, 5);
 
             const subjects = {
-                'MR': 'Pista', 'MT': 'Calle de rodaje', 'FA': 'Facilidades',
-                'NV': 'Navegación', 'NA': 'Radioayuda', 'OB': 'Ostacolo',
-                'SA': 'Spazio aereo', 'WU': 'Lavori'
+                'MR': 'Runway', 'MT': 'Taxiway', 'FA': 'Facilities',
+                'NV': 'Navigation', 'NA': 'Navaid', 'OB': 'Obstacle',
+                'SA': 'Airspace', 'WU': 'Works'
             };
 
             const conditions = {
-                'LC': 'chiusa', 'AS': 'fuori servizio', 'XX': 'vari',
-                'LT': 'illuminazione limitata', 'AH': 'cambiato'
+                'LC': 'Closed', 'AS': 'Unserviceable', 'XX': 'Various',
+                'LT': 'Limited Lighting', 'AH': 'Changed'
             };
 
             const subjectText = subjects[subject] || subject;
@@ -366,7 +366,7 @@ export class NotamDisplay {
 
         let decoded = text.toUpperCase();
 
-        // Replace common abbreviations with Italian explanations
+        // Replace common abbreviations with English explanations
         for (const [abbr, meaning] of Object.entries(this.abbreviations)) {
             const regex = new RegExp(`\\b${abbr}\\b`, 'g');
             decoded = decoded.replace(regex, `<span class="notam-abbr" title="${meaning}">${abbr}</span>`);
@@ -404,7 +404,7 @@ export class NotamDisplay {
         // Check Q-code first
         if (qUpper.includes('QMR') || qUpper.includes('QMT')) {
             if (text.includes('RWY') || text.includes('RUNWAY')) {
-                return { name: 'Pista', class: 'runway' };
+                return { name: 'Runway', class: 'runway' };
             }
             if (text.includes('TWY') || text.includes('TAXIWAY')) {
                 return { name: 'Taxiway', class: 'runway' };
@@ -413,24 +413,24 @@ export class NotamDisplay {
 
         // Content-based detection
         if (text.includes('RWY') || text.includes('RUNWAY') || text.includes('TWY') || text.includes('TAXIWAY')) {
-            return { name: 'Pista/Taxiway', class: 'runway' };
+            return { name: 'Runway/Taxiway', class: 'runway' };
         }
         if (text.includes('OBST') || text.includes('CRANE') || text.includes('TOWER') || text.includes('WIP') || text.includes('OBSTACLE')) {
-            return { name: 'Ostacolo', class: 'obstacle' };
+            return { name: 'Obstacle', class: 'obstacle' };
         }
         if (text.includes('VOR') || text.includes('NDB') || text.includes('ILS') || text.includes('DME') || text.includes('GNSS') || text.includes('LOC')) {
-            return { name: 'Navigazione', class: 'navigation' };
+            return { name: 'Navigation', class: 'navigation' };
         }
         if (text.includes('CTR') || text.includes('TMA') || text.includes('AIRSPACE') || text.includes('PROHIBITED') || text.includes('RESTRICTED') || text.includes('TRA') || text.includes('TEMPO')) {
-            return { name: 'Spazio Aereo', class: 'airspace' };
+            return { name: 'Airspace', class: 'airspace' };
         }
         if (text.includes('FREQ') || text.includes('TWR') || text.includes('APP') || text.includes('ATIS') || text.includes('RADIO') || text.includes('COM')) {
-            return { name: 'Comunicazioni', class: 'communication' };
+            return { name: 'Communications', class: 'communication' };
         }
         if (text.includes('FUEL') || text.includes('SER') || text.includes('OPR')) {
-            return { name: 'Servizi', class: 'other' };
+            return { name: 'Services', class: 'other' };
         }
-        return { name: 'Generale', class: 'other' };
+        return { name: 'General', class: 'other' };
     }
 
     /**
@@ -440,20 +440,20 @@ export class NotamDisplay {
         if (!text) return '';
 
         let decoded = text
-            .replace(/H24/g, '24 ore')
-            .replace(/SR/g, 'Alba')
-            .replace(/SS/g, 'Tramonto')
-            .replace(/HJ/g, 'Ore diurne')
-            .replace(/HN/g, 'Ore notturne')
-            .replace(/MON/g, 'Lun')
-            .replace(/TUE/g, 'Mar')
-            .replace(/WED/g, 'Mer')
-            .replace(/THU/g, 'Gio')
-            .replace(/FRI/g, 'Ven')
-            .replace(/SAT/g, 'Sab')
-            .replace(/SUN/g, 'Dom')
-            .replace(/DAILY/g, 'Giornaliero')
-            .replace(/EXC/g, 'eccetto');
+            .replace(/H24/g, '24 Hours')
+            .replace(/SR/g, 'Sunrise')
+            .replace(/SS/g, 'Sunset')
+            .replace(/HJ/g, 'Daytime')
+            .replace(/HN/g, 'Nighttime')
+            .replace(/MON/g, 'Mon')
+            .replace(/TUE/g, 'Tue')
+            .replace(/WED/g, 'Wed')
+            .replace(/THU/g, 'Thu')
+            .replace(/FRI/g, 'Fri')
+            .replace(/SAT/g, 'Sat')
+            .replace(/SUN/g, 'Sun')
+            .replace(/DAILY/g, 'Daily')
+            .replace(/EXC/g, 'Except');
 
         return decoded;
     }
@@ -466,8 +466,8 @@ export class NotamDisplay {
 
         const upper = text.toUpperCase();
 
-        if (upper === 'SFC' || upper === 'GND') return 'Superficie';
-        if (upper === 'UNL' || upper === 'UNLTD') return 'Illimitato';
+        if (upper === 'SFC' || upper === 'GND') return 'Surface';
+        if (upper === 'UNL' || upper === 'UNLTD') return 'Unlimited';
 
         // FL format
         if (upper.startsWith('FL')) {

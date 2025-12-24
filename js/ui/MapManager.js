@@ -17,130 +17,6 @@ export class MapManager {
         this.openaipLayer = null;
         this.waypointModeEnabled = true;
         this.lastGeocodingCall = 0;
-
-        setTimeout(() => {
-            const exportBtn = document.getElementById('exportMapImage');
-            if (exportBtn) {
-                const newBtn = exportBtn.cloneNode(true);
-                exportBtn.parentNode.replaceChild(newBtn, exportBtn);
-                newBtn.addEventListener('click', () => this.exportMapImage());
-            }
-        }, 500);
-    }
-
-    async exportMapImage() {
-        const btn = document.getElementById('exportMapImage');
-        const originalText = btn ? btn.innerHTML : '';
-        if (btn) {
-            btn.innerHTML = '⏳ Foto...';
-            btn.disabled = true;
-        }
-
-        let tempContainer = null;
-
-        try {
-            // 1. Setup A4 Landscape container
-            const width = 1754;
-            const height = 1240;
-
-            tempContainer = document.createElement('div');
-            tempContainer.style.width = width + 'px';
-            tempContainer.style.height = height + 'px';
-            // Use fixed positioning far off-screen to avoid visibility issues while ensuring rendering
-            // z-index -9999 ensures it's behind everything
-            tempContainer.style.position = 'fixed';
-            tempContainer.style.left = '0';
-            tempContainer.style.top = '0';
-            tempContainer.style.zIndex = '-9999';
-            // Explicitly visible to ensure rendering, rely on z-index to hide
-            tempContainer.style.visibility = 'visible';
-            tempContainer.style.backgroundColor = 'white';
-            document.body.appendChild(tempContainer);
-
-            // 2. Initialize Map
-            const tempMap = L.map(tempContainer, {
-                zoomControl: false,
-                attributionControl: false,
-                preferCanvas: false, // Standard DOM rendering often safer for snapshots
-                fadeAnimation: false,
-                zoomAnimation: false,
-                markerZoomAnimation: false
-            });
-
-            // 3. Simple Layer Add (Sequential)
-            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                crossOrigin: 'Anonymous'
-            }).addTo(tempMap);
-
-            const openaip = L.tileLayer(`/api/openaip?z={z}&x={x}&y={y}`, {
-                crossOrigin: 'Anonymous',
-                tms: false
-            }).addTo(tempMap);
-
-            // 4. Overlays & Bounds
-            const bounds = L.latLngBounds();
-            const drawRoute = (waypoints, color) => {
-                if (waypoints.length === 0) return;
-                const latlngs = [];
-                waypoints.forEach(wp => {
-                    const pos = [wp.lat, wp.lon];
-                    latlngs.push(pos);
-                    bounds.extend(pos);
-
-                    L.circleMarker(pos, { radius: 5, color: '#000', weight: 1, fillColor: '#fff', fillOpacity: 1 }).addTo(tempMap);
-                    L.marker(pos, {
-                        icon: L.divIcon({
-                            className: 'temp-map-label',
-                            html: `<div style="font-weight:bold; background:rgba(255,255,255,0.9); padding:2px 5px; border-radius:3px; border:1px solid #666; white-space:nowrap; font-size:12px;">${wp.name}</div>`,
-                            iconSize: [null, null],
-                            iconAnchor: [20, -10]
-                        })
-                    }).addTo(tempMap);
-                    L.circle(pos, { color: color, fillColor: color === 'red' ? '#30f' : '#FFD700', fillOpacity: 0.1, weight: 1, radius: 2 * 1852 }).addTo(tempMap);
-                });
-                if (latlngs.length >= 2) L.polyline(latlngs, { color: color, weight: 3 }).addTo(tempMap);
-            };
-
-            drawRoute(this.waypoints, 'red');
-            drawRoute(this.alternateWaypoints, '#FF8C00');
-
-            // 5. Fit View
-            if (bounds.isValid()) {
-                tempMap.fitBounds(bounds, { padding: [50, 50] });
-            } else if (this.map) {
-                tempMap.setView(this.map.getCenter(), this.map.getZoom());
-            } else {
-                tempMap.setView([41.9, 12.5], 6);
-            }
-            // Force leaflet calculation
-            tempMap.invalidateSize();
-
-            // 6. Simple Wait (2s) - No Promise logic, just time
-            await new Promise(r => setTimeout(r, 2000));
-
-            // 7. Single Capture (No pre-warm)
-            const dataUrl = await window.htmlToImage.toPng(tempContainer, {
-                quality: 1.0,
-                backgroundColor: '#ffffff',
-                width: width,
-                height: height,
-                cacheBust: true
-            });
-
-            // 8. Download
-            const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-            const link = document.createElement('a');
-            link.download = `VFR-Map-Export_${dateStr}.png`;
-            link.href = dataUrl;
-            link.click();
-
-        } catch (error) {
-            console.error('Export Error:', error);
-            alert('Errore export: ' + error.message);
-        } finally {
-            if (tempContainer && document.body.contains(tempContainer)) document.body.removeChild(tempContainer);
-            if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
-        }
     }
 
     init(mapId) {
@@ -368,6 +244,23 @@ export class MapManager {
         this.waypoints = [];
         this.alternateWaypoints = [];
         this.updateRoute();
+    }
+
+    clearAlternate() {
+        this.alternateWaypoints.forEach(wp => {
+            if (wp.marker) this.map.removeLayer(wp.marker);
+            if (wp.circle) this.map.removeLayer(wp.circle);
+        });
+        this.alternateWaypoints = [];
+        this.updateRoute();
+    }
+
+    updateWaypointName(index, newName, routeType = 'main') {
+        const targetArray = routeType === 'main' ? this.waypoints : this.alternateWaypoints;
+        if (index >= 0 && index < targetArray.length) {
+            targetArray[index].name = newName;
+            this.updateRoute();
+        }
     }
 
     updateRoute() {
